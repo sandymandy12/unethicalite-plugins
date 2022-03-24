@@ -12,16 +12,17 @@ plugins {
     checkstyle
 }
 
-project.extra["GithubUrl"] = "https://github.com/buracc/unethicalite-plugins"
-project.extra["GithubUserName"] = "buracc"
+project.extra["GithubUrl"] = "https://github.com/sandymandy12/unethicalite-plugins"
+project.extra["GithubUserName"] = "sandymandy12"
 project.extra["GithubRepoName"] = "unethicalite-plugins"
 
 apply<BootstrapPlugin>()
+apply<MavenPublishPlugin>()
 
 subprojects {
     group = "dev.unethical"
 
-    project.extra["PluginProvider"] = "unethicalite"
+    project.extra["PluginProvider"] = "Deecat10"
     project.extra["ProjectSupportUrl"] = "https://discord.gg/WTvTbSPknJ"
     project.extra["PluginLicense"] = "3-Clause BSD License"
 
@@ -75,6 +76,11 @@ subprojects {
             isReproducibleFileOrder = true
             dirMode = 493
             fileMode = 420
+        }
+
+        register<Copy>("copyDeps") {
+            into("./build/deps/")
+            from(configurations["runtimeClasspath"])
         }
     }
 }
