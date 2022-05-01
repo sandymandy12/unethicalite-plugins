@@ -11,7 +11,8 @@ import java.util.Arrays;
 public enum AlchSpell
 {
 	HIGH(Regular.HIGH_LEVEL_ALCHEMY, new RuneRequirement(1, Rune.NATURE), new RuneRequirement(5, Rune.FIRE)),
-	LOW(Regular.LOW_LEVEL_ALCHEMY, new RuneRequirement(1, Rune.NATURE), new RuneRequirement(1, Rune.FIRE));
+	LOW(Regular.LOW_LEVEL_ALCHEMY, new RuneRequirement(1, Rune.NATURE), new RuneRequirement(1, Rune.FIRE)),
+	GRAB(Regular.TELEKINETIC_GRAB, new RuneRequirement(1, Rune.LAW), new RuneRequirement(1, Rune.AIR));
 
 	private final Regular spell;
 	private final RuneRequirement[] requirements;

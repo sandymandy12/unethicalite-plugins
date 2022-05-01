@@ -1,10 +1,9 @@
 package dev.hoot.fighter;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
-import net.runelite.client.config.ConfigSection;
-import net.runelite.client.config.Range;
+import net.runelite.client.config.*;
+
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 
 @ConfigGroup("hootfighter")
 public interface HootFighterConfig extends Config
@@ -48,6 +47,14 @@ public interface HootFighterConfig extends Config
 			closedByDefault = true
 	)
 	String alching = "Alching";
+
+	@ConfigSection(
+			name = "Sliding",
+			description = "Slide out(hop/teleport) settings",
+			position = 5,
+			closedByDefault = true
+	)
+	String sliding = "Sliding";
 
 	@ConfigItem(
 			keyName = "monster",
@@ -229,5 +236,52 @@ public interface HootFighterConfig extends Config
 	default String alchItems()
 	{
 		return "Weed";
+	}
+
+	@ConfigItem(
+			position = 0,
+			keyName = "blastOptions",
+			name = "Teleport",
+			description = "Select the way you would like to tele out",
+			section = sliding
+	)
+	default BlastOff teleOptions()
+	{
+		return BlastOff.ALWAYS;
+	}
+	@ConfigItem(
+			position = 1,
+			keyName = "hopOptions",
+			name = "Hop",
+			description = "Select when to blast out",
+			section = sliding
+	)
+	default BlastOff hopOptions()
+	{
+		return BlastOff.ALWAYS;
+	}
+
+	@ConfigItem(
+			keyName = "telekey",
+			name = "Teleport Key",
+			description = "must match key in world hopper plugin",
+			position = 2,
+			section = sliding
+	)
+	default Keybind teleKey()
+	{
+		return new Keybind(KeyEvent.VK_OPEN_BRACKET, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
+	}
+
+	@ConfigItem(
+			position = 3,
+			keyName = "hopOptions",
+			name = "No loot",
+			description = "hop if world doesn't have loot",
+			section = sliding
+	)
+	default boolean noLoot()
+	{
+		return false;
 	}
 }

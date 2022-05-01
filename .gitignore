@@ -25,3 +25,4 @@ replay_pid*
 release
 plugins.json
 test
+scripts/__pycache__
