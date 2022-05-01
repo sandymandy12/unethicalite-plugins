@@ -13,16 +13,17 @@ plugins {
     kotlin("jvm") version "1.6.21"
 }
 
-project.extra["GithubUrl"] = "https://github.com/unethicalite/unethicalite-plugins-release"
-project.extra["GithubUserName"] = "unethicalite"
-project.extra["GithubRepoName"] = "unethicalite-plugins-release"
+project.extra["GithubUrl"] = "https://github.com/sandymandy12/unethicalite-plugins"
+project.extra["GithubUserName"] = "sandymandy12"
+project.extra["GithubRepoName"] = "unethicalite-plugins"
 
 apply<BootstrapPlugin>()
+apply<MavenPublishPlugin>()
 
 allprojects {
     group = "dev.unethicalite"
 
-    project.extra["PluginProvider"] = "unethicalite"
+    project.extra["PluginProvider"] = "sandymandy12"
     project.extra["ProjectSupportUrl"] = "https://discord.gg/WTvTbSPknJ"
     project.extra["PluginLicense"] = "3-Clause BSD License"
 
@@ -80,6 +81,11 @@ allprojects {
 
         compileKotlin {
             kotlinOptions.jvmTarget = "11"
+        }
+
+        register<Copy>("copyDeps") {
+            into("./build/deps/")
+            from(configurations["runtimeClasspath"])
         }
     }
 }
