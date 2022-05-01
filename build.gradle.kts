@@ -82,5 +82,8 @@ subprojects {
             into("./build/deps/")
             from(configurations["runtimeClasspath"])
         }
+        compileKotlin {
+            kotlinOptions.jvmTarget = "11"
+        }
     }
 }
