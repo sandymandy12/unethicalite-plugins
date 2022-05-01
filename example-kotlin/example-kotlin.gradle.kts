@@ -1,7 +1,15 @@
-version = "0.0.4"
+version = "0.0.1"
 
-project.extra["PluginName"] = "Hoot Butler"
-project.extra["PluginDescription"] = "One-Clicks construction butler dialogs"
+project.extra["PluginName"] = "Kotlin Example Plugin"
+project.extra["PluginDescription"] = ""
+
+plugins{
+    kotlin("kapt")
+}
+
+dependencies {
+    kapt(Libraries.pf4j)
+}
 
 tasks {
     jar {

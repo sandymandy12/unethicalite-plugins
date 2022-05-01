@@ -55,6 +55,7 @@ open class BootstrapTask : DefaultTask() {
 
                     val releases = ArrayList<JsonBuilder>()
 
+                    val sha512 = hash(plugin.readBytes())
                     releases.add(
                         JsonBuilder(
                             "version" to it.project.version,
@@ -64,8 +65,8 @@ open class BootstrapTask : DefaultTask() {
                                 project.rootProject.extra.get(
                                     "GithubRepoName"
                                 )
-                            }/master/release/${it.project.name}-${it.project.version}.jar",
-                            "sha512sum" to hash(plugin.readBytes())
+                            }/master/${it.project.name}-${it.project.version}.jar",
+                            "sha512sum" to sha512
                         )
                     )
 
@@ -85,9 +86,12 @@ open class BootstrapTask : DefaultTask() {
                             continue
                         }
 
-                        if (it.project.version.toString() in item.getJSONArray("releases").toString()) {
-                            pluginAdded = true
+                        val itemReleases = item.getJSONArray("releases")
+                        if (it.project.version.toString() in itemReleases.toString()) {
+                            val last = itemReleases.get(itemReleases.length() - 1) as JSONObject
+                            last.put("sha512sum", sha512)
                             plugins.add(item)
+                            pluginAdded = true
                             break
                         }
 

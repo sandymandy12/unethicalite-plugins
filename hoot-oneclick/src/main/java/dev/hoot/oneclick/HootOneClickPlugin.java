@@ -2,15 +2,14 @@ package dev.hoot.oneclick;
 
 import com.google.inject.Inject;
 import com.google.inject.Provides;
-import dev.hoot.api.EntityNameable;
-import dev.hoot.api.Interactable;
-import dev.hoot.api.entities.NPCs;
-import dev.hoot.api.entities.Players;
-import dev.hoot.api.entities.TileItems;
-import dev.hoot.api.entities.TileObjects;
-import dev.hoot.api.game.Game;
-import dev.hoot.api.items.Inventory;
-import dev.hoot.api.widgets.Widgets;
+import dev.unethicalite.api.EntityNameable;
+import dev.unethicalite.api.Interactable;
+import dev.unethicalite.api.entities.NPCs;
+import dev.unethicalite.api.entities.Players;
+import dev.unethicalite.api.entities.TileItems;
+import dev.unethicalite.api.entities.TileObjects;
+import dev.unethicalite.api.game.Game;
+import dev.unethicalite.api.items.Inventory;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
@@ -23,9 +22,6 @@ import net.runelite.api.Tile;
 import net.runelite.api.TileItem;
 import net.runelite.api.TileObject;
 import net.runelite.api.events.MenuEntryAdded;
-import net.runelite.api.util.Text;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -57,14 +53,12 @@ public class HootOneClickPlugin extends Plugin
 	private static final List<Integer> GAME_OBJECT_OPCODES = List.of(1, 2, 3, 4, 5, 6, 1001, 1002);
 	private static final List<Integer> NPC_OPCODES = List.of(7, 8, 9, 10, 11, 12, 13, 1003);
 	private static final List<Integer> GROUND_ITEM_OPCODES = List.of(18, 19, 20, 21, 22, 1004);
-	private static final List<Integer> WIDGET_OPCODES = List.of(24, 25, 26, 28, 29, 30, 39, 40, 41, 42, 43);
-	private static final List<Integer> ITEM_OPCODES = List.of(33, 34, 35, 36, 37, 38, 1005);
+	private static final List<Integer> ITEM_OPCODES = List.of(1007, 25, 57);
 	private static final List<Integer> PLAYER_OPCODES = List.of(44, 45, 46, 47, 48, 49, 50, 51);
 
 	private final Map<String, String> gameObjectConfigs = new HashMap<>();
 	private final Map<String, String> npcConfigs = new HashMap<>();
 	private final Map<String, String> groundItemConfigs = new HashMap<>();
-	private final Map<String, String> widgetConfigs = new HashMap<>();
 	private final Map<String, String> itemConfigs = new HashMap<>();
 	private final Map<String, String> playerConfigs = new HashMap<>();
 
@@ -87,7 +81,6 @@ public class HootOneClickPlugin extends Plugin
 		parseConfigs(config.gameObjectConfig(), gameObjectConfigs);
 		parseConfigs(config.npcConfig(), npcConfigs);
 		parseConfigs(config.groundItemConfig(), groundItemConfigs);
-		parseConfigs(config.widgetConfig(), widgetConfigs);
 		parseConfigs(config.itemConfig(), itemConfigs);
 		parseConfigs(config.playerConfig(), playerConfigs);
 	}
@@ -139,7 +132,7 @@ public class HootOneClickPlugin extends Plugin
 
 		if (!itemConfigs.isEmpty() && ITEM_OPCODES.contains(opcode))
 		{
-			Item item = Inventory.getFirst(e.getIdentifier());
+			Item item = Inventory.getItem(e.getActionParam0());
 			MenuEntry replaced = replace(itemConfigs, item);
 			if (replaced != null)
 			{
@@ -155,43 +148,19 @@ public class HootOneClickPlugin extends Plugin
 			if (replaced != null)
 			{
 				client.setMenuEntries(new MenuEntry[]{replaced});
-				return;
-			}
-		}
-
-		if (!widgetConfigs.isEmpty() && WIDGET_OPCODES.contains(opcode))
-		{
-			String action = Text.removeTags(e.getOption()) + " " + Text.removeTags(e.getTarget());
-			Widget widget = Widgets.fromId(e.getActionParam1());
-			if (widget != null && widgetConfigs.containsKey(action))
-			{
-				String replaced = widgetConfigs.get(action);
-
-				if (isUseOn(replaced))
-				{
-					Item usedItem = getUsedItem(replaced);
-					if (usedItem != null)
-					{
-						client.setMenuEntries(new MenuEntry[]{useOn(usedItem, widget)});
-					}
-
-					return;
-				}
-
-				client.setMenuEntries(new MenuEntry[]{widget.getMenu(action).toEntry(client)});
 			}
 		}
 	}
 
-	private <T extends Interactable> MenuEntry replace(Map<String, String> replacements, T t)
+	private <T extends Interactable> MenuEntry replace(Map<String, String> replacements, T target)
 	{
-		if (!(t instanceof EntityNameable))
+		if (!(target instanceof EntityNameable))
 		{
 			return null;
 		}
 
-		if ((!config.exactEntityNames() || !replacements.containsKey(((EntityNameable) t).getName()))
-				&& replacements.keySet().stream().noneMatch(x -> ((EntityNameable) t).getName().toLowerCase().contains(x.toLowerCase())))
+		if ((!config.exactEntityNames() || !replacements.containsKey(((EntityNameable) target).getName()))
+				&& replacements.keySet().stream().noneMatch(x -> ((EntityNameable) target).getName().toLowerCase().contains(x.toLowerCase())))
 		{
 			return null;
 		}
@@ -199,12 +168,12 @@ public class HootOneClickPlugin extends Plugin
 		String replacement;
 		if (config.exactEntityNames())
 		{
-			replacement = replacements.get(((EntityNameable) t).getName());
+			replacement = replacements.get(((EntityNameable) target).getName());
 		}
 		else
 		{
 			String key = replacements.keySet().stream()
-					.filter(x -> ((EntityNameable) t).getName().toLowerCase().contains(x.toLowerCase()))
+					.filter(x -> ((EntityNameable) target).getName().toLowerCase().contains(x.toLowerCase()))
 					.findFirst()
 					.orElse(null);
 			replacement = replacements.get(key);
@@ -212,6 +181,7 @@ public class HootOneClickPlugin extends Plugin
 
 		if (replacement == null)
 		{
+			log.debug("Replacement was null for {}", target);
 			return null;
 		}
 
@@ -223,7 +193,7 @@ public class HootOneClickPlugin extends Plugin
 				Item usedItem = Inventory.getFirst(Integer.parseInt(itemName));
 				if (usedItem != null)
 				{
-					return useOn(usedItem, t);
+					return useOn(usedItem, target).setForceLeftClick(true);
 				}
 			}
 			else
@@ -231,7 +201,7 @@ public class HootOneClickPlugin extends Plugin
 				Item usedItem = getUsedItem(replacement);
 				if (usedItem != null)
 				{
-					return useOn(usedItem, t);
+					return useOn(usedItem, target).setForceLeftClick(true);
 				}
 			}
 
@@ -239,82 +209,50 @@ public class HootOneClickPlugin extends Plugin
 			return null;
 		}
 
-		if (!t.hasAction(replacement))
+		if (!target.hasAction(replacement))
 		{
 			return null;
 		}
 
-		return t.getMenu(replacement).toEntry(client, ONECLICK_MENUOPTION_PREFIX + replacement, ((EntityNameable) t).getName(), null);
+		return target.getMenu(replacement).toEntry(client, 0)
+				.setOption(ONECLICK_MENUOPTION_PREFIX + replacement)
+				.setTarget(((EntityNameable) target).getName())
+				.setForceLeftClick(true);
 	}
 
 	private MenuEntry useOn(Item item, Interactable target)
 	{
 		if (target instanceof TileItem)
 		{
-			return target.getMenu(0, MenuAction.ITEM_USE_ON_GROUND_ITEM.getId()).toEntry(client,
-					ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->",
-					((TileItem) target).getName(),
-					x ->
-					{
-						client.setSelectedItemWidget(item.getWidgetId());
-						client.setSelectedItemSlot(item.getSlot());
-						client.setSelectedItemID(item.getId());
-					});
+			return target.getMenu(0, MenuAction.WIDGET_TARGET_ON_GROUND_ITEM.getId()).toEntry(client, 0)
+					.setOption(ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->")
+					.setTarget(((TileItem) target).getName())
+					.onClick(x -> item.use());
 		}
 
 		if (target instanceof TileObject)
 		{
-			return target.getMenu(0, MenuAction.ITEM_USE_ON_GAME_OBJECT.getId()).toEntry(client,
-					ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->",
-					((TileObject) target).getName(),
-					x ->
-					{
-						client.setSelectedItemWidget(item.getWidgetId());
-						client.setSelectedItemSlot(item.getSlot());
-						client.setSelectedItemID(item.getId());
-					});
+			return target.getMenu(0, MenuAction.WIDGET_TARGET_ON_GAME_OBJECT.getId()).toEntry(client, 0)
+					.setOption(ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->")
+					.setTarget(((TileObject) target).getName())
+					.onClick(x -> item.use());
 		}
 
 		if (target instanceof Item)
 		{
-			return item.getMenu(0, MenuAction.ITEM_USE_ON_WIDGET_ITEM.getId()).toEntry(client,
-					ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->",
-					((Item) target).getName(),
-					x ->
-					{
-						client.setSelectedItemWidget(item.getWidgetId());
-						client.setSelectedItemSlot(((Item) target).getSlot());
-						client.setSelectedItemID(((Item) target).getId());
-					});
+			return target.getMenu(0, MenuAction.WIDGET_TARGET_ON_WIDGET.getId()).toEntry(client, 0)
+					.setOption(ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->")
+					.setTarget(((Item) target).getName())
+					.onClick(x -> item.use());
 		}
 
 		if (target instanceof Actor)
 		{
-			MenuAction menuAction = target instanceof NPC ? MenuAction.ITEM_USE_ON_NPC : MenuAction.ITEM_USE_ON_PLAYER;
-			return target.getMenu(0, menuAction.getId()).toEntry(client,
-					ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->",
-					((Actor) target).getName(),
-					x ->
-					{
-						client.setSelectedItemWidget(item.getWidgetId());
-						client.setSelectedItemSlot(item.getSlot());
-						client.setSelectedItemID(item.getId());
-					});
-		}
-
-		if (target instanceof Widget)
-		{
-			int widgetId = ((Widget) target).getId();
-			return target.getMenu(0, MenuAction.ITEM_USE_ON_WIDGET.getId()).toEntry(client,
-					ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->",
-					"Widget[" + WidgetInfo.TO_GROUP(((Widget) target).getId()) + ", "
-							+ WidgetInfo.TO_CHILD(widgetId) + "]",
-					x ->
-					{
-						client.setSelectedItemWidget(item.getWidgetId());
-						client.setSelectedItemSlot(item.getSlot());
-						client.setSelectedItemID(item.getId());
-					});
+			MenuAction menuAction = target instanceof NPC ? MenuAction.WIDGET_TARGET_ON_NPC : MenuAction.WIDGET_TARGET_ON_PLAYER;
+			return target.getMenu(0, menuAction.getId()).toEntry(client, 0)
+					.setOption(ONECLICK_MENUOPTION_PREFIX + item.getName() + " ->")
+					.setTarget(((Actor) target).getName())
+					.onClick(x -> item.use());
 		}
 
 		return null;
@@ -374,7 +312,6 @@ public class HootOneClickPlugin extends Plugin
 		gameObjectConfigs.clear();
 		npcConfigs.clear();
 		groundItemConfigs.clear();
-		widgetConfigs.clear();
 		itemConfigs.clear();
 		playerConfigs.clear();
 	}

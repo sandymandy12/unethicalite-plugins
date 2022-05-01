@@ -1,9 +1,9 @@
 package dev.hoot.notifier;
 
 import com.google.inject.Provides;
-import dev.hoot.api.coords.ScenePoint;
-import dev.hoot.api.entities.TileObjects;
-import dev.hoot.api.scene.Tiles;
+import dev.unethicalite.api.coords.ScenePoint;
+import dev.unethicalite.api.entities.TileObjects;
+import dev.unethicalite.api.scene.Tiles;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
@@ -35,7 +35,7 @@ public class HootNotifierPlugin extends Plugin
 			MenuAction.GAME_OBJECT_FOURTH_OPTION,
 			MenuAction.GAME_OBJECT_FIFTH_OPTION,
 			MenuAction.ITEM_USE_ON_GAME_OBJECT,
-			MenuAction.SPELL_CAST_ON_GAME_OBJECT
+			MenuAction.WIDGET_TARGET_ON_GAME_OBJECT
 	);
 
 	@Inject

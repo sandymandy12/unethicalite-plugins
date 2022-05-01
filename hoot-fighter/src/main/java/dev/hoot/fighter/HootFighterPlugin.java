@@ -1,24 +1,24 @@
 package dev.hoot.fighter;
 
 import com.google.inject.Provides;
-import dev.hoot.api.entities.Players;
-import dev.hoot.api.entities.TileItems;
-import dev.hoot.api.game.Combat;
-import dev.hoot.api.game.Game;
-import dev.hoot.api.items.Inventory;
-import dev.hoot.api.magic.Magic;
-import dev.hoot.api.magic.Regular;
-import dev.hoot.api.magic.Rune;
-import dev.hoot.api.movement.Movement;
-import dev.hoot.api.movement.Reachable;
-import dev.hoot.api.plugins.LoopedPlugin;
-import dev.hoot.api.widgets.Dialog;
-import dev.hoot.api.widgets.Prayers;
+import dev.unethicalite.api.entities.Players;
+import dev.unethicalite.api.entities.TileItems;
+import dev.unethicalite.api.game.Combat;
+import dev.unethicalite.api.game.Game;
+import dev.unethicalite.api.items.Inventory;
+import dev.unethicalite.api.magic.Magic;
+import dev.unethicalite.api.movement.Movement;
+import dev.unethicalite.api.movement.Reachable;
+import dev.unethicalite.api.plugins.LoopedPlugin;
+import dev.unethicalite.api.widgets.Dialog;
+import dev.unethicalite.api.widgets.Prayers;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
+import net.runelite.api.Item;
+import net.runelite.api.NPC;
+import net.runelite.api.Player;
+import net.runelite.api.TileItem;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
-import net.runelite.client.util.Text;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
@@ -32,7 +32,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @PluginDescriptor(
 		name = "Hoot Fighter",
@@ -53,10 +52,7 @@ public class HootFighterPlugin extends LoopedPlugin
 	private WorldPoint startPoint;
 
 	private List<TileItem> notOurItems = new ArrayList<>();
-	private boolean teleblocked = false;
-	private boolean hopFailed = false;
-	private boolean hopDisabled = false;
-	public int wildyLevel = 0;
+
 	@Override
 	public void startUp() throws Exception
 	{
@@ -104,103 +100,9 @@ public class HootFighterPlugin extends LoopedPlugin
 		}
 	}
 
-
-
 	@Override
 	protected int loop()
 	{
-
-		wildyLevel = Game.getWildyLevel();
-		Player local = Players.getLocal();
-
-		final int minCombatLevel = Math.max(3, local.getCombatLevel() - wildyLevel);
-		final int maxCombatLevel = Math.min(Experience.MAX_COMBAT_LEVEL, local.getCombatLevel() + wildyLevel);
-
-		if (wildyLevel != 0) {
-
-			List<Player> suspects = Players.getAll(p -> (local.distanceTo(p.getWorldLocation()) > 11)
-					&& (p.getCombatLevel() >= minCombatLevel && p.getCombatLevel() <= maxCombatLevel));
-
-			if (suspects.size() > 0)
-			{
-				Stream<Player> pkers;
-				boolean hop = false;
-				switch (config.hopOptions())
-				{
-					case ALWAYS:
-						hop = true;
-						break;
-					case IN_RANGE:
-						pkers = suspects.stream().filter(p -> local.distanceTo(p.getWorldLocation()) < 12);
-						if (pkers.count() > 0)
-						{
-							hop = true;
-						}
-					case TARGETED:
-						pkers = suspects.stream().filter(p -> p.getInteracting() == local || p.getSkullIcon() == SkullIcon.SKULL);
-						if (pkers.count() > 0)
-						{
-							hop = true;
-						}
-						break;
-					case HOP_ABOVE_30:
-						if (wildyLevel >= 30)
-						{
-							hop = true;
-						}
-						break;
-					case HOP_ABOVE_20:
-						if (wildyLevel >= 20)
-						{
-							hop = true;
-						}
-				}
-
-				if (hop)
-				{
-					log.info(config.teleKey().toString());
-
-					VirtualKeyboard.sendKeys(config.teleKey().getKeyCode());
-					hopDisabled = false;
-					return -3;
-				}
-
-				if (wildyLevel <= 30 && !teleblocked)
-				{
-					boolean teleport = false;
-					switch (config.teleOptions()) {
-						case TARGETED:
-							pkers = suspects.stream().filter(p -> p.getInteracting() == local || p.getSkullIcon() == SkullIcon.SKULL);
-							if (pkers.count() > 0)
-							{
-								teleport = true;
-							}
-							break;
-						case IN_RANGE:
-							pkers = suspects.stream().filter(p -> local.distanceTo(p.getWorldLocation()) < 12);
-							if (pkers.count() > 0)
-							{
-								teleport = true;
-							}
-							break;
-						case ALWAYS:
-							teleport = true;
-							break;
-					}
-
-					if (teleport && Inventory.contains(ItemID.LAW_RUNE)) {
-						Magic.cast(Regular.VARROCK_TELEPORT);
-						log.info("Teleporting frokm pker...");
-						return -3;
-					}
-				}
-
-			}
-		}
-		else
-		{
-			teleblocked = false;
-		}
 
 		if (Movement.isWalking())
 		{
@@ -245,6 +147,7 @@ public class HootFighterPlugin extends LoopedPlugin
 			}
 		}
 
+		Player local = Players.getLocal();
 		List<String> itemsToLoot = List.of(config.loot().split(","));
 		if (!Inventory.isFull())
 		{
@@ -257,32 +160,14 @@ public class HootFighterPlugin extends LoopedPlugin
 			);
 			if (loot != null)
 			{
-				if (Inventory.contains(Rune.LAW.getRuneId()))
+				if (!Reachable.isInteractable(loot.getTile()))
 				{
-					Magic.cast(Regular.TELEKINETIC_GRAB, loot);
-					return -4;
-				}
-				else if (!Reachable.isInteractable(loot.getTile()))
-				{
-					log.info("not reachable...");
 					Movement.walkTo(loot.getTile().getWorldLocation());
 					return -4;
 				}
 
 				loot.pickup();
 				return -3;
-			}
-
-			if (config.noLoot())
-			{
-				log.info("No loot. Hopping..");
-				if (!local.isAnimating())
-				{
-					int lootItems = TileItems.getAll(x -> itemsToLoot.contains(x.getName())).size();
-					log.info(lootItems + " lootable items available");
-//					VirtualKeyboard.sendKeys(config.teleKey().getKeyCode());
-
-				}
 			}
 		}
 
@@ -314,12 +199,7 @@ public class HootFighterPlugin extends LoopedPlugin
 		{
 			if (startPoint == null)
 			{
-//				log.info("No attackable monsters in area");
-				return -1;
-			}
-
-			if (config.attackRange() == 0)
-			{
+				log.info("No attackable monsters in area");
 				return -1;
 			}
 
@@ -333,8 +213,6 @@ public class HootFighterPlugin extends LoopedPlugin
 			return -4;
 		}
 
-
-
 		mob.interact("Attack");
 		return -3;
 	}
@@ -343,29 +221,11 @@ public class HootFighterPlugin extends LoopedPlugin
 	public void onChatMessage(ChatMessage e)
 	{
 		String message = e.getMessage();
-		String msg = Text.removeTags(message);
-
 		if (message.contains("other players have dropped"))
 		{
 			var notOurs = TileItems.getAt(Players.getLocal().getWorldLocation(), x -> true);
 			log.debug("{} are not our items", notOurs.stream().map(TileItem::getName).collect(Collectors.toList()));
 			notOurItems.addAll(notOurs);
-		}
-
-		if (e.getType() == ChatMessageType.GAMEMESSAGE &&
-				msg.contains("You cannot switch worlds so soon after combat"))
-		{
-			hopFailed = true;
-		}
-
-		if (e.getType() == ChatMessageType.GAMEMESSAGE && msg.contains("Tele Block spell"))
-		{
-			teleblocked = true;
-		}
-		if (e.getType() == ChatMessageType.GAMEMESSAGE && msg.contains("Oh dear, you are dead"));
-		{
-			teleblocked = false;
-			hopFailed = false;
 		}
 	}
 }

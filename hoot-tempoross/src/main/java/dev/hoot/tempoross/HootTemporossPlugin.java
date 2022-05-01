@@ -1,15 +1,15 @@
 package dev.hoot.tempoross;
 
 import com.google.inject.Provides;
-import dev.hoot.api.entities.NPCs;
-import dev.hoot.api.entities.Players;
-import dev.hoot.api.entities.TileObjects;
-import dev.hoot.api.items.Inventory;
-import dev.hoot.api.movement.Movement;
-import dev.hoot.api.plugins.LoopedPlugin;
-import dev.hoot.api.scene.Tiles;
-import dev.hoot.api.widgets.Dialog;
-import dev.hoot.api.widgets.Widgets;
+import dev.unethicalite.api.entities.NPCs;
+import dev.unethicalite.api.entities.Players;
+import dev.unethicalite.api.entities.TileObjects;
+import dev.unethicalite.api.items.Inventory;
+import dev.unethicalite.api.movement.Movement;
+import dev.unethicalite.api.plugins.LoopedPlugin;
+import dev.unethicalite.api.scene.Tiles;
+import dev.unethicalite.api.widgets.Dialog;
+import dev.unethicalite.api.widgets.Widgets;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
@@ -37,7 +37,28 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static dev.hoot.tempoross.TemporossID.*;
+import static dev.hoot.tempoross.TemporossID.ANIMATION_COOK;
+import static dev.hoot.tempoross.TemporossID.ANIMATION_INTERACTING;
+import static dev.hoot.tempoross.TemporossID.GRAPHIC_TETHERED;
+import static dev.hoot.tempoross.TemporossID.GRAPHIC_TETHERING;
+import static dev.hoot.tempoross.TemporossID.ITEM_COOKED_FISH;
+import static dev.hoot.tempoross.TemporossID.ITEM_EMPTY_BUCKET;
+import static dev.hoot.tempoross.TemporossID.ITEM_HAMMER;
+import static dev.hoot.tempoross.TemporossID.ITEM_HARPOON;
+import static dev.hoot.tempoross.TemporossID.ITEM_RAW_FISH;
+import static dev.hoot.tempoross.TemporossID.ITEM_ROPE;
+import static dev.hoot.tempoross.TemporossID.ITEM_WATER_BUCKET;
+import static dev.hoot.tempoross.TemporossID.NPC_DOUBLE_FISH_SPOT;
+import static dev.hoot.tempoross.TemporossID.NPC_EXIT;
+import static dev.hoot.tempoross.TemporossID.NPC_FIRE;
+import static dev.hoot.tempoross.TemporossID.NPC_SINGLE_FISH_SPOT;
+import static dev.hoot.tempoross.TemporossID.NPC_SINGLE_FISH_SPOT_SECOND;
+import static dev.hoot.tempoross.TemporossID.NPC_VULN_WHIRLPOOL;
+import static dev.hoot.tempoross.TemporossID.OBJECT_CLOUD_SHADOW;
+import static dev.hoot.tempoross.TemporossID.OBJECT_DAMAGED_MAST;
+import static dev.hoot.tempoross.TemporossID.OBJECT_FIRE;
+import static dev.hoot.tempoross.TemporossID.OBJECT_LOBBY_LADDER;
+import static dev.hoot.tempoross.TemporossID.OBJECT_LOBBY_PUMP;
 
 @Extension
 @PluginDescriptor(
@@ -337,15 +358,16 @@ public class HootTemporossPlugin extends LoopedPlugin
 			case SECOND_CATCH:
 			case THIRD_CATCH:
 				NPC fishSpot = NPCs.getNearest(it ->
-								NPC_DOUBLE_FISH_SPOT == it.getId()
+						NPC_DOUBLE_FISH_SPOT == it.getId()
 								&& it.getWorldLocation().distanceTo(workArea.getRangePoint()) <= 20
 								&& filterDangerousNPCs.test(it));
 
-				if (fishSpot == null) {
+				if (fishSpot == null)
+				{
 					fishSpot = NPCs.getNearest(it ->
-								Set.of(NPC_SINGLE_FISH_SPOT, NPC_SINGLE_FISH_SPOT_SECOND).contains(it.getId())
-								&& it.getWorldLocation().distanceTo(workArea.getRangePoint()) <= 20
-								&& filterDangerousNPCs.test(it));
+							Set.of(NPC_SINGLE_FISH_SPOT, NPC_SINGLE_FISH_SPOT_SECOND).contains(it.getId())
+									&& it.getWorldLocation().distanceTo(workArea.getRangePoint()) <= 20
+									&& filterDangerousNPCs.test(it));
 				}
 
 				if (fishSpot != null)

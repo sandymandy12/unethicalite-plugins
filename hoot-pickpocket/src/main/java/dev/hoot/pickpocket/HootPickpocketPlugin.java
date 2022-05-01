@@ -2,17 +2,17 @@ package dev.hoot.pickpocket;
 
 import com.google.inject.Inject;
 import com.google.inject.Provides;
-import dev.hoot.api.commons.Rand;
-import dev.hoot.api.entities.NPCs;
-import dev.hoot.api.entities.Players;
-import dev.hoot.api.game.Combat;
-import dev.hoot.api.items.Bank;
-import dev.hoot.api.items.Inventory;
-import dev.hoot.api.movement.Movement;
-import dev.hoot.api.movement.Reachable;
-import dev.hoot.api.movement.pathfinder.BankLocation;
-import dev.hoot.api.plugins.LoopedPlugin;
-import dev.hoot.api.widgets.Dialog;
+import dev.unethicalite.api.commons.Rand;
+import dev.unethicalite.api.entities.NPCs;
+import dev.unethicalite.api.entities.Players;
+import dev.unethicalite.api.game.Combat;
+import dev.unethicalite.api.items.Bank;
+import dev.unethicalite.api.items.Inventory;
+import dev.unethicalite.api.movement.Movement;
+import dev.unethicalite.api.movement.Reachable;
+import dev.unethicalite.api.movement.pathfinder.BankLocation;
+import dev.unethicalite.api.plugins.LoopedPlugin;
+import dev.unethicalite.api.widgets.Dialog;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Item;
 import net.runelite.api.ItemID;
@@ -40,6 +40,7 @@ public class HootPickpocketPlugin extends LoopedPlugin
 		if (jug != null && config.foodId() == ItemID.JUG_OF_WINE)
 		{
 			jug.interact("Drop");
+			log.debug("Dropping jug");
 			return -1;
 		}
 
@@ -47,23 +48,26 @@ public class HootPickpocketPlugin extends LoopedPlugin
 		if (pouch != null && pouch.getQuantity() > 5)
 		{
 			pouch.interact("Open-all");
+			log.debug("Opening pouches");
 			return -1;
 		}
 
 		if (config.eat())
 		{
-			if (config.eatHp() >= Combat.getMissingHealth())
+			if (Combat.getMissingHealth() >= config.eatHp())
 			{
 				Item food = Inventory.getFirst(config.foodId());
 				if (food != null)
 				{
-					food.interact(0);
+					food.interact(1);
+					log.debug("Eating food");
 					return -1;
 				}
 
 				if (Bank.isOpen())
 				{
 					Bank.withdraw(config.foodId(), 10, Bank.WithdrawMode.ITEM);
+					log.debug("Withdrawing food");
 					return -1;
 				}
 
@@ -101,6 +105,11 @@ public class HootPickpocketPlugin extends LoopedPlugin
 
 			Player local = Players.getLocal();
 			if (local.getGraphic() == 245 && !Dialog.isOpen())
+			{
+				return -1;
+			}
+
+			if (local.isMoving() && target.distanceTo(local) > 3)
 			{
 				return -1;
 			}
