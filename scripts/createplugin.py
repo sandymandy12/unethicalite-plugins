@@ -2,10 +2,10 @@ import os
 import sys
 import getopt
 
-from constants import INNER_PATH, PLUGIN_GRADLE_TEMPLATE, CONFIG_TEMPLATE, CLASSIC_TEMPLATE, LOOPED_TEMPLATE
+from constants import *
 
 def load_params(argv):
-    files = []
+    files = ["Plugin", "Config"]
     plugin_name = ""
     description = '""'
     looped = False
@@ -14,26 +14,23 @@ def load_params(argv):
         opts, argv = getopt.getopt(
             argv, "hn:f:d:l", ["name=", "files=", "description=", "looped="])
     except getopt.GetoptError:
-        print('createplugin.py -n <name> -f <files> -d <description> optional: -l <looped?>')
+        print('createplugin.py -n <name> -d <description> optional: -l <looped?> -f <files?>')
         sys.exit(2)
 
     for opt, arg in opts:
         if opt == '-h':
-            print('createplugin.py -n <name> -f <files> -d <description>')
-            print("\nFiles are comma separated. default:\n")
-            print('... -f "Plugin,Config"')
-            print('-l looped is optional. will use Looped extension. Otherwise Plugin extension')
+            print('\ncreateplugin.py -n <name> -d <description>')
+            print('-f for  are comma separated. default: eg: -f "Panel,Overlay,Spell"')
+            print('-l looped is optional. will use Looped extension. Otherwise Plugin extension\n')
             sys.exit()
         elif opt in ("-n", "--name"):
             plugin_name = arg
         elif opt in ("-f", "--files"):
-            files = arg.split(',')
+            files += arg.split(',')
         elif opt in ("-d", "--description"):
             description = arg
         elif opt in ("-l", "--looped"):
             looped = True
-
-    files = ["Plugin", "Config"] if len(files) == 0 else files
 
     return {"name": plugin_name, "files": files, "description": description, "looped": looped}
 
@@ -74,6 +71,7 @@ def main(args):
     # key words to parse: UPPERCASED, LOWERCASED, CAPITALIZED, FULLNAME
 
     plugin_template = LOOPED_TEMPLATE if params["looped"] else CLASSIC_TEMPLATE
+
     for i in params["files"]:
         name_cap = plugin_name.replace(" ", "")
         file_path = os.path.join(plugin_src_dir, f'{name_cap}{i}.java')
@@ -82,7 +80,9 @@ def main(args):
         parsed_template = ""
 
         if str(i).lower() == "plugin":
-            parsed_template = parse(plugin_template, plugin_name)
+            parsed_template = parse(plugin_template, plugin_name, params['description'])
+        elif str(i).lower() == "panel":
+            parsed_template = parse(PANEL_TEMPLATE, plugin_name)
         elif str(i).lower() == "config":
             parsed_template = parse(CONFIG_TEMPLATE, plugin_name)
         else:

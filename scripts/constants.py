@@ -24,7 +24,7 @@ tasks {
 """
 
 CONFIG_TEMPLATE = """\
-package dev.hoot.LOWERCASED;
+package dev.unethicalite.LOWERCASED;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
@@ -72,6 +72,7 @@ package dev.unethicalite.LOWERCASED;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.events.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -99,6 +100,12 @@ public class CAPITALIZEDPlugin extends Plugin
 	public CAPITALIZEDConfig getConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(CAPITALIZEDConfig.class);
+	}
+	
+	@Subscribe
+	public void onGameTick(GameTick e)
+	{
+	    
 	}
 
 }
@@ -168,3 +175,62 @@ public class UPPERCASEDPlugin extends LoopedPlugin
 
 
 """
+
+PANEL_TEMPLATE = """\
+package dev.unethicalite.LOWERCASED;
+
+import net.runelite.api.Client;
+import net.runelite.client.ui.overlay.OverlayMenuEntry;
+import net.runelite.client.ui.overlay.OverlayPanel;
+import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.components.LineComponent;
+import net.runelite.client.ui.overlay.components.TitleComponent;
+
+import javax.inject.Inject;
+import java.awt.*;
+
+import static net.runelite.api.MenuAction.RUNELITE_OVERLAY_CONFIG;
+import static net.runelite.client.ui.overlay.OverlayManager.OPTION_CONFIGURE;
+
+class CAPITALIZEDPanel extends OverlayPanel
+{
+
+    private final Client client;
+    private final CAPITALIZEDPlugin plugin;
+    private final CAPITALIZEDConfig config;
+
+    @Inject
+    private CAPITALIZEDPanel(Client client, CAPITALIZEDPlugin plugin, CAPITALIZEDConfig config)
+    {
+        super(plugin);
+        setPosition(OverlayPosition.TOP_LEFT);
+        this.client = client;
+        this.plugin = plugin;
+        this.config = config;
+
+        getMenuEntries().add(new OverlayMenuEntry(RUNELITE_OVERLAY_CONFIG, OPTION_CONFIGURE, "FULLNAME"));
+    }
+
+    @Override
+    public Dimension render(Graphics2D graphics) {
+        {
+
+            panelComponent.getChildren().add(TitleComponent.builder()
+                    .text("")
+                    .color(Color.cyan)
+                    .build());
+            
+        
+            panelComponent.getChildren().add(LineComponent.builder()
+                    .left("")
+                    .leftColor(Color.LIGHT_GRAY)
+                    .right("")
+                    .rightColor(Color.lightGray)
+                    .build());
+        }
+        return super.render(graphics);
+    }
+}
+
+"""
+
