@@ -239,29 +239,6 @@ public interface HootFighterConfig extends Config
 	}
 
 	@ConfigItem(
-			position = 0,
-			keyName = "blastOptions",
-			name = "Teleport",
-			description = "Select the way you would like to tele out",
-			section = sliding
-	)
-	default BlastOff teleOptions()
-	{
-		return BlastOff.ALWAYS;
-	}
-	@ConfigItem(
-			position = 1,
-			keyName = "hopOptions",
-			name = "Hop",
-			description = "Select when to blast out",
-			section = sliding
-	)
-	default BlastOff hopOptions()
-	{
-		return BlastOff.ALWAYS;
-	}
-
-	@ConfigItem(
 			keyName = "telekey",
 			name = "Teleport Key",
 			description = "must match key in world hopper plugin",
@@ -275,7 +252,7 @@ public interface HootFighterConfig extends Config
 
 	@ConfigItem(
 			position = 3,
-			keyName = "hopOptions",
+			keyName = "noLoot",
 			name = "No loot",
 			description = "hop if world doesn't have loot",
 			section = sliding

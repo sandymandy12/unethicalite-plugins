@@ -35,30 +35,21 @@ import net.runelite.client.config.ConfigSection;
 public interface CAPITALIZEDConfig extends Config
 {
 	@ConfigSection(
-			name = "",
-			description = "",
+			name = "Section 1",
+			description = "placeholder",
 			closedByDefault = true,
 			position = 0
 	)
-	String SECTION = "";
-
-
-	@ConfigSection(
-			name = "",
-			description = "",
-			closedByDefault = true,
-			position = 1
-	)
-	String SECTION = "";
+	String section1 = "section1";
 
 	@ConfigItem(
-			keyName = "",
-			name = "",
-			description = "",
-			section = ,
+			keyName = "item1",
+			name = "Item 1",
+			description = "placeholder",
+			section = section1,
 			position = 0
 	)
-	default String ITEM()
+	default String item()
 	{
 		return "";
 	}
@@ -72,6 +63,7 @@ package dev.unethicalite.LOWERCASED;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Client;
 import net.runelite.api.events.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -101,6 +93,16 @@ public class CAPITALIZEDPlugin extends Plugin
 	{
 		return configManager.getConfig(CAPITALIZEDConfig.class);
 	}
+	
+	@Override
+	protected void startUp() throws Exception
+	{
+    }
+	
+	@Override
+	protected void shutdown() throws Exception
+	{
+    }
 	
 	@Subscribe
 	public void onGameTick(GameTick e)

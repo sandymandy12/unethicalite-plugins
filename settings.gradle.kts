@@ -25,6 +25,7 @@
 
 rootProject.name = "unethicalite-plugins"
 
+include("dcpkhopper")
 include("hoot-fighter")
 include("hoot-oneclick")
 include("hoot-agility")
@@ -37,8 +38,8 @@ include("hoot-aerialfishing")
 include("hoot-chins")
 include("hoot-notifier")
 include("hoot-butler")
-include("kebab-buyer-script")
-include("example-kotlin")
+//include("kebab-buyer-script")
+//include("example-kotlin")
 
 for (project in rootProject.children) {
     project.apply {
