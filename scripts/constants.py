@@ -126,7 +126,8 @@ import net.runelite.client.plugins.PluginDescriptor;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
 
-import java.util.concurrent.Executors;
+import javax.inject.Inject;
+import java.util.concurrent.ScheduledExecutorService;
 
 @PluginDescriptor(
 		name = "FULLNAME",
@@ -135,11 +136,12 @@ import java.util.concurrent.Executors;
 )
 @Slf4j
 @Extension
-public class UPPERCASEDPlugin extends LoopedPlugin
+public class CAPITALIZEDPlugin extends LoopedPlugin
 {
+	private ScheduledExecutorService executor;
 	
 	@Inject
-	private UPPERCASEDConfig config;
+	private CAPITALIZEDConfig config;
 
 	@Inject
 	private ItemManager itemManager;
@@ -152,9 +154,9 @@ public class UPPERCASEDPlugin extends LoopedPlugin
 	}
 
 	@Provides
-	public HootFighterConfig getConfig(ConfigManager configManager)
+	public CAPITALIZEDConfig getConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(UPPERCASEDConfig.class);
+		return configManager.getConfig(CAPITALIZEDConfig.class);
 	}
 
 	@Override
@@ -171,7 +173,7 @@ public class UPPERCASEDPlugin extends LoopedPlugin
 	protected int loop()
 	{
 
-		return -3;
+		return -1;
 	}
 }
 

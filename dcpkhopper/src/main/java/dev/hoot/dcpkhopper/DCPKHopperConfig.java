@@ -1,4 +1,4 @@
-package dev.unethicalite.dcpkhopper;
+package dev.hoot.dcpkhopper;
 
 import net.runelite.client.config.*;
 

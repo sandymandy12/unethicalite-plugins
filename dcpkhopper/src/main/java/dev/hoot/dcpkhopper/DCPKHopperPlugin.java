@@ -1,4 +1,4 @@
-package dev.unethicalite.dcpkhopper;
+package dev.hoot.dcpkhopper;
 
 import com.google.inject.Inject;
 import com.google.inject.Provides;
@@ -27,7 +27,6 @@ import dev.unethicalite.api.game.*;
 
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 
 @PluginDescriptor(
 		name = "DC PK Hopper",

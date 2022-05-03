@@ -25,6 +25,7 @@
 
 rootProject.name = "unethicalite-plugins"
 
+include("dctelegraber")
 include("dcpkhopper")
 include("hoot-fighter")
 include("hoot-oneclick")
