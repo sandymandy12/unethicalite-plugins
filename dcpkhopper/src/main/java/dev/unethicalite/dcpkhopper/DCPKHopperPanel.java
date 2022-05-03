@@ -35,18 +35,29 @@ class DCPKHopperPanel extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics) {
         {
+            String hopping = plugin.hopping ? "HOPPING" : "idle";
+            String targetWorld = plugin.quickHopTargetWorld == null
+                    ? "none"
+                    : String.valueOf(plugin.quickHopTargetWorld.getId());
 
             panelComponent.getChildren().add(TitleComponent.builder()
-                    .text("")
+                    .text("PK Hopper")
                     .color(Color.cyan)
                     .build());
             
         
             panelComponent.getChildren().add(LineComponent.builder()
-                    .left("")
+                    .left("Hopping:")
                     .leftColor(Color.LIGHT_GRAY)
-                    .right("")
-                    .rightColor(Color.lightGray)
+                    .right(hopping)
+                    .rightColor(Color.ORANGE)
+                    .build());
+
+            panelComponent.getChildren().add(LineComponent.builder()
+                    .left("Target world")
+                    .leftColor(Color.LIGHT_GRAY)
+                    .right(targetWorld)
+                    .rightColor(Color.GREEN)
                     .build());
         }
         return super.render(graphics);

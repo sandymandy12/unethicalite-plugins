@@ -2,6 +2,7 @@ package dev.unethicalite.dcpkhopper;
 
 import com.google.inject.Inject;
 import com.google.inject.Provides;
+import dev.unethicalite.api.entities.Players;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
@@ -15,6 +16,7 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.HotkeyListener;
 import org.pf4j.Extension;
 
@@ -48,9 +50,16 @@ public class DCPKHopperPlugin extends Plugin
 	@Inject
 	private KeyManager keyManager;
 
+	@Inject
+	OverlayManager overlayManager;
+
+	@Inject
+	DCPKHopperPanel dcpkHopperPanel;
+
 	private final int DISPLAY_SWITCHER_MAX_ATTEMPTS = 3;
 	private int displaySwitcherAttempts = 0;
-	private World quickHopTargetWorld ;
+	public World quickHopTargetWorld;
+	public boolean hopping;
 
 	private final HotkeyListener hopKeyListener = new HotkeyListener(() -> config.hopKey())
 	{
@@ -78,32 +87,57 @@ public class DCPKHopperPlugin extends Plugin
 
 	@Override
 	protected void startUp() throws Exception {
+		overlayManager.add(dcpkHopperPanel);
 		keyManager.registerKeyListener(hopKeyListener);
 		keyManager.registerKeyListener(teleKeyListener);
+		Worlds.loadWorlds();
 	}
 
 	@Override
 	protected void shutDown() throws Exception {
+		overlayManager.remove(dcpkHopperPanel);
 		keyManager.unregisterKeyListener(hopKeyListener);
 		keyManager.unregisterKeyListener(teleKeyListener);
+		resetQuickHopper();
+		hopping = false;
 	}
 
 	@Subscribe
 	public void onGameTick(GameTick e)
 	{
+
+		if (Game.getWildyLevel() == 0)
+		{
+			hopping = false;
+			resetQuickHopper();
+			return;
+		}
+
+
+//		if (!hopping)
+//		{
+//			return;
+//		}
+
 		if (quickHopTargetWorld == null)
 		{
 			return;
 		}
 
+//		if (quickHopTargetWorld == null && pkerLocated())
+//		{
+//			log.info("pkers found");
+//			hop(true);
+//			return;
+//
+//		}
 
-		if (!Game.getClient().isWorldSelectOpen())
+		if (!Worlds.isHopperOpen())
 		{
+			log.info("hopper is closed");
+			Worlds.loadWorlds();
+			if (++displaySwitcherAttempts >= DISPLAY_SWITCHER_MAX_ATTEMPTS) {
 
-			Worlds.openHopper();
-
-			if (++displaySwitcherAttempts >= DISPLAY_SWITCHER_MAX_ATTEMPTS)
-			{
 				String chatMessage = new ChatMessageBuilder()
 						.append(ChatColorType.NORMAL)
 						.append("Failed to quick-hop after ")
@@ -121,12 +155,11 @@ public class DCPKHopperPlugin extends Plugin
 
 				resetQuickHopper();
 			}
-			else
-			{
-//				Worlds.hopTo(quickHopTargetWorld);
-				log.info("tick - target world: {}", quickHopTargetWorld.getId());
-				resetQuickHopper();
-			}
+		}
+		else
+		{
+			log.info("world hopper is open");
+			Worlds.hopTo(quickHopTargetWorld);
 		}
 
 	}
@@ -134,9 +167,20 @@ public class DCPKHopperPlugin extends Plugin
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
+		if (event.getType() == ChatMessageType.PUBLICCHAT &event.getMessage().contains("="))
+		{
+			hop(false);
+		}
+
 		if (event.getType() != ChatMessageType.GAMEMESSAGE)
 		{
 			return;
+		}
+
+		if (event.getMessage().equals("You cannot switch worlds so soon after combat"))
+		{
+			log.info("Under attack");
+			resetQuickHopper();
 		}
 
 		if (event.getMessage().equals("Please finish what you're doing before using the World Switcher."))
@@ -146,10 +190,76 @@ public class DCPKHopperPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		if (event.getGameState() == GameState.LOADING)
+		{
+//			log.info("Game state changed " + event.getGameState());
+			resetQuickHopper();
+			hopping = false;
+		}
+	}
+
+	@Subscribe
 	public void onPlayerSpawned(PlayerSpawned playerSpawned)
 	{
 		Player player =	playerSpawned.getPlayer();
 
+		if (player.equals(Players.getLocal()))
+		{
+			return;
+		}
+
+//		log.info("hopping? {}, player -> {} ",hopping, player.getName());
+
+		if (hopping)
+		{
+			return;
+		}
+
+		if (pkerLocated(player))
+		{
+			log.info("{} [{}] spawned, hopping",player.getName(), player.getCombatLevel());
+			clientThread.invoke(() -> hop(true));
+		}
+
+	}
+
+	private boolean pkerLocated(Player player)
+	{
+		final Player local = Players.getLocal();
+		final int wildernessLevel = Game.getWildyLevel();
+
+		if (wildernessLevel == 0)
+		{
+			return false;
+		}
+
+		final int minCombatLevel = Math.max(3,local.getCombatLevel() - wildernessLevel);
+		final int maxCombatLevel = Math.min(Experience.MAX_COMBAT_LEVEL, local.getCombatLevel() + wildernessLevel);
+
+		return (player.getCombatLevel() >= minCombatLevel && player.getCombatLevel() <= maxCombatLevel);
+
+	}
+
+	private boolean pkerLocated()
+	{
+		final Player local = Players.getLocal();
+		final int wildernessLevel = Game.getWildyLevel();
+		if (wildernessLevel == 0)
+		{
+//			resetQuickHopper();
+			return false;
+		}
+
+		final int minCombatLevel = Math.max(3,local.getCombatLevel() - wildernessLevel);
+		final int maxCombatLevel = Math.min(Experience.MAX_COMBAT_LEVEL, local.getCombatLevel() + wildernessLevel);
+
+		Player pker = Players.getNearest((player) -> player.getCombatLevel() >= minCombatLevel
+				&& player.getCombatLevel() <= maxCombatLevel
+				&& !player.equals(local));
+
+		return pker != null;
 	}
 
 	private void hop(boolean random) {
@@ -158,6 +268,7 @@ public class DCPKHopperPlugin extends Plugin
 			return;
 		}
 
+		Worlds.loadWorlds();
 		HashSet<World> attempted = new HashSet<World>();
 		attempted.add(Worlds.getCurrentWorld());
 
@@ -168,15 +279,18 @@ public class DCPKHopperPlugin extends Plugin
 		currentWorldTypes.remove(WorldType.SKILL_TOTAL);
 		currentWorldTypes.remove(WorldType.LAST_MAN_STANDING);
 
-		List<World> worlds = Worlds.getAll((w) -> !(w.equals(Worlds.getCurrentWorld())));
-
 		int totalLevel = Game.getClient().getTotalLevel();
 
 		World world = null;
 		try {
 			do {
+				if (!random)
+				{
+					world = Worlds.getFirst(8);
+					break;
+				}
 				world = Worlds.getRandom((w) -> !attempted.contains(w));
-				log.info("World {} {}. Attempt: {}", world.getId(), world.getTypes().toString(), attempted.size());
+//				log.info("World {} {}. Attempt: {}", world.getId(), world.getTypes().toString(), attempted.size());
 
 				attempted.add(world);
 
@@ -189,15 +303,12 @@ public class DCPKHopperPlugin extends Plugin
 						int totalRequirement = Integer.parseInt(world.getActivity().substring(0, world.getActivity().indexOf(" ")));
 						if (totalLevel >= totalRequirement) {
 							types.remove(WorldType.SKILL_TOTAL);
-						} else {
-							log.info("Did not meet level requirements, skipping " + world.getId());
 						}
 					} catch (NumberFormatException ex) {
 						log.warn("Failed to parse total level requirement", ex);
 					}
 				}
 				if (world.getPlayerCount() > config.maxPlayerCount()) {
-					log.info("World is too large, skipping " + world.getId());
 					continue;
 				}
 
@@ -246,10 +357,15 @@ public class DCPKHopperPlugin extends Plugin
 
 			quickHopTargetWorld = rsWorld;
 			displaySwitcherAttempts = 0;
+			hopping = true;
 
-			Worlds.openHopper();
+			if (!Worlds.isHopperOpen())
+			{
+				Worlds.openHopper();
+				log.info("Opening hopper");
+
+			}
 			Worlds.hopTo(rsWorld);
-			log.info("hop - Game state " + Game.getState().toString());
 
 		}
 	}
