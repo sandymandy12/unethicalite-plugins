@@ -3,6 +3,9 @@ package dev.unethicalite.dcpkhopper;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import dev.unethicalite.api.entities.Players;
+import dev.unethicalite.api.magic.Magic;
+import dev.unethicalite.api.magic.Regular;
+import dev.unethicalite.api.magic.Spell;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
@@ -106,35 +109,24 @@ public class DCPKHopperPlugin extends Plugin
 	public void onGameTick(GameTick e)
 	{
 
-		if (Game.getWildyLevel() == 0)
+		if (!pkerLocated())
 		{
-			hopping = false;
-			resetQuickHopper();
 			return;
 		}
 
-
-//		if (!hopping)
-//		{
-//			return;
-//		}
+		if (quickHopTargetWorld == null && hopping)
+		{
+			log.info("invoking hop");
+			clientThread.invoke(() -> hop(true));
+		}
 
 		if (quickHopTargetWorld == null)
 		{
 			return;
 		}
 
-//		if (quickHopTargetWorld == null && pkerLocated())
-//		{
-//			log.info("pkers found");
-//			hop(true);
-//			return;
-//
-//		}
-
 		if (!Worlds.isHopperOpen())
 		{
-			log.info("hopper is closed");
 			Worlds.loadWorlds();
 			if (++displaySwitcherAttempts >= DISPLAY_SWITCHER_MAX_ATTEMPTS) {
 
@@ -153,12 +145,9 @@ public class DCPKHopperPlugin extends Plugin
 								.runeLiteFormattedMessage(chatMessage)
 								.build());
 
-				resetQuickHopper();
 			}
 		}
-		else
-		{
-			log.info("world hopper is open");
+		else {
 			Worlds.hopTo(quickHopTargetWorld);
 		}
 
@@ -210,8 +199,6 @@ public class DCPKHopperPlugin extends Plugin
 			return;
 		}
 
-//		log.info("hopping? {}, player -> {} ",hopping, player.getName());
-
 		if (hopping)
 		{
 			return;
@@ -219,7 +206,7 @@ public class DCPKHopperPlugin extends Plugin
 
 		if (pkerLocated(player))
 		{
-			log.info("{} [{}] spawned, hopping",player.getName(), player.getCombatLevel());
+			log.info("{}[{}] spawned",player.getName(), player.getCombatLevel());
 			clientThread.invoke(() -> hop(true));
 		}
 
@@ -238,27 +225,13 @@ public class DCPKHopperPlugin extends Plugin
 		final int minCombatLevel = Math.max(3,local.getCombatLevel() - wildernessLevel);
 		final int maxCombatLevel = Math.min(Experience.MAX_COMBAT_LEVEL, local.getCombatLevel() + wildernessLevel);
 
-		return (player.getCombatLevel() >= minCombatLevel && player.getCombatLevel() <= maxCombatLevel);
+		return (player.getCombatLevel() >= minCombatLevel && player.getCombatLevel() <= maxCombatLevel && !(player.equals(local)));
 
 	}
 
 	private boolean pkerLocated()
 	{
-		final Player local = Players.getLocal();
-		final int wildernessLevel = Game.getWildyLevel();
-		if (wildernessLevel == 0)
-		{
-//			resetQuickHopper();
-			return false;
-		}
-
-		final int minCombatLevel = Math.max(3,local.getCombatLevel() - wildernessLevel);
-		final int maxCombatLevel = Math.min(Experience.MAX_COMBAT_LEVEL, local.getCombatLevel() + wildernessLevel);
-
-		Player pker = Players.getNearest((player) -> player.getCombatLevel() >= minCombatLevel
-				&& player.getCombatLevel() <= maxCombatLevel
-				&& !player.equals(local));
-
+		Player pker = Players.getNearest(this::pkerLocated);
 		return pker != null;
 	}
 
@@ -372,12 +345,27 @@ public class DCPKHopperPlugin extends Plugin
 
 	private void resetQuickHopper()
 	{
+//		hopping = false;
 		displaySwitcherAttempts = 0;
 		quickHopTargetWorld = null;
 	}
 	private void teleport()
 	{
-
+		for (Spell spell : Regular.values())
+		{
+			String name = spell.toString();
+			if (name.equals("HOME_TELEPORT"))
+			{
+				continue;
+			}
+			if (name.contains("TELEPORT") && spell.canCast())
+			{
+				log.info("Casting " + spell);
+				Magic.cast(spell);
+				return;
+			}
+		}
+		log.info("No teleport spells to cast");
 	}
 }
 
