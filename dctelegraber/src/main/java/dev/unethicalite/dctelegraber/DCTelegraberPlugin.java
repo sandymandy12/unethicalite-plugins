@@ -102,6 +102,7 @@ public class DCTelegraberPlugin extends Plugin
 		{
 			pker = null;
 			quickHopWorld = null;
+			teleGrabProjectile = null;
 			lootedItem = null;
 
 		}
@@ -147,12 +148,13 @@ public class DCTelegraberPlugin extends Plugin
 		if (pker != null)
 		{
 			log.info("nearby {}", nearbyPlayer.getName());
+			bank();
 			return;
 		}
 
 		List<String> itemsToLoot = List.of(config.loot().split(","));
 
-		Item alchItem = Inventory.getFirst(x -> x.getName() != null && itemsToLoot.contains(x.getName()));
+		Item alchItem = Inventory.getFirst(x -> x.getName() != null && !x.getName().equals("Nature rune") && itemsToLoot.contains(x.getName()));
 		if (alchItem != null && !local.isAnimating() && Regular.HIGH_LEVEL_ALCHEMY.canCast())
 		{
 
@@ -175,9 +177,11 @@ public class DCTelegraberPlugin extends Plugin
 				if (Regular.TELEKINETIC_GRAB.canCast() && Inventory.getCount(true, ItemID.LAW_RUNE) > 2)
 				{
 
+//					log.info("LOOTING >> anim {}, idle {}, proj {}, loot {} ", local.isAnimating(), local.isIdle(), teleGrabProjectile != null, lootedItem != null);
+
 					if (local.isIdle() && teleGrabProjectile == null)
 					{
-//						log.info("LOOTING >> anim {}, idle {}, proj {}, loot {} ", local.isAnimating(), local.isIdle(), teleGrabProjectile != null, lootedItem != null);
+
 						grab(loot);
 					}
 				}
@@ -207,6 +211,11 @@ public class DCTelegraberPlugin extends Plugin
 
 				if (Worlds.isHopperOpen() && quickHopWorld == null)
 				{
+					if (lootedItem != null)
+					{
+						lootedItem = null;
+						return;
+					}
 					log.info("HOPPING >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
 					clientThread.invoke(this::hop);
 				}
@@ -261,32 +270,40 @@ public class DCTelegraberPlugin extends Plugin
 		}
 
 
-		if (!Bank.isMainTabOpen())
+		int natureRunes = Inventory.getCount(true,ItemID.NATURE_RUNE);
+		if (natureRunes > 0)
 		{
-			log.info("main tab not open");
-			Bank.openMainTab();
+			Bank.depositAllExcept(ItemID.LAW_RUNE, ItemID.ENERGY_POTION4, ItemID.LOBSTER, ItemID.FIRE_RUNE);
+			log.info("depositing nature runes");
 			return;
 		}
 
-//		log.info(Inventory.getAll().toString());
-//		Bank.depositAllExcept(ItemID.LAW_RUNE, ItemID.ENERGY_POTION4, ItemID.LOBSTER, ItemID.FIRE_RUNE);
-//		Bank.deposit(ItemID.NATURE_RUNE, 1000000);
-
-//		Bank.depositInventory();
-//		Bank.deposit(ItemID.LAW_RUNE, 1);
+		final int lawsNeeded = 500 - Inventory.getCount(true, ItemID.LAW_RUNE);
+		final int energyNeeded = 6 - Inventory.getCount((x) -> x.getName().contains("Energy potion"));
+		final boolean fireNeeded = Inventory.getCount(true, ItemID.FIRE_RUNE) < 5;
 
 
-		final int lawsNeeded = 250 - Inventory.getCount(true, ItemID.LAW_RUNE);
-		final int energyNeeded = 4 - Inventory.getCount((x) -> x.getName().contains("Energy potion"));
+		if (lawsNeeded > 0)
+		{
+			log.info("Withdrawing {} laws", lawsNeeded);
+			Bank.withdraw(ItemID.LAW_RUNE, lawsNeeded, Bank.WithdrawMode.ITEM);
+		}
+		else if (fireNeeded)
+		{
+			log.info("Withdrawing 50 fire runes");
+			Bank.withdraw(ItemID.FIRE_RUNE, 50, Bank.WithdrawMode.ITEM);
+		}
+		else if (energyNeeded > 0)
+		{
+			log.info("Withdrawing {} energy pots", energyNeeded);
+			Bank.withdraw(ItemID.ENERGY_POTION4, energyNeeded, Bank.WithdrawMode.NOTED);
+		}
+		else
+		{
+			final int lobsterNeeded = Inventory.getFreeSlots() - 3;
+			Bank.withdraw(ItemID.LOBSTER, lobsterNeeded, Bank.WithdrawMode.DEFAULT);
+		}
 
-//		log.info("Withdrawing {} laws, {} energy pots", lawsNeeded, energyNeeded);
-
-//		Bank.withdraw(ItemID.LAW_RUNE, lawsNeeded, Bank.WithdrawMode.DEFAULT);
-//		Bank.withdraw(ItemID.ENERGY_POTION4, energyNeeded, Bank.WithdrawMode.DEFAULT);
-
-		// save at least 1 slot
-//		final int lobsterNeeded = Inventory.getFreeSlots() - 1;
-//		Bank.withdraw(ItemID.LOBSTER, lobsterNeeded, Bank.WithdrawMode.DEFAULT);
 	}
 
 	private void move()
