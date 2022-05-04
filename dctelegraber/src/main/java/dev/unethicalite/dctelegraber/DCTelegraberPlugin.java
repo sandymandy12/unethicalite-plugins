@@ -48,7 +48,7 @@ import java.util.concurrent.ScheduledExecutorService;
 )
 @Slf4j
 @Extension
-public class DCTelegraberPlugin extends Plugin
+public class DCTelegraberPlugin extends LoopedPlugin
 {
 	private ScheduledExecutorService executor;
 	
@@ -72,14 +72,14 @@ public class DCTelegraberPlugin extends Plugin
 	public Player pker;
 	public World quickHopWorld;
 	
-	private WorldPoint NATURE_RUNE_WORLD_POINT;
+	final private WorldPoint NATURE_RUNE_WORLD_POINT = new WorldPoint(3302, 3855, 0);
 
 
 	@Override
 	public void startUp() throws Exception
 	{
+		super.startUp();
 		overlayManager.add(dcTelegraberPanel);
-//		Worlds.loadWorlds();
 	}
 
 	@Provides
@@ -91,7 +91,13 @@ public class DCTelegraberPlugin extends Plugin
 	@Override
 	public void shutDown() throws Exception
 	{
+		super.shutDown();
+		if (executor != null)
+		{
+			executor.shutdown();
+		}
 		overlayManager.remove(dcTelegraberPanel);
+		reset();
 	}
 
 	@Subscribe
@@ -100,10 +106,7 @@ public class DCTelegraberPlugin extends Plugin
 		GameState gameState = gameStateChanged.getGameState();
 		if (gameState == GameState.HOPPING)
 		{
-			pker = null;
-			quickHopWorld = null;
-			teleGrabProjectile = null;
-			lootedItem = null;
+			reset();
 
 		}
 		if (gameState == GameState.LOGGED_IN)
@@ -123,15 +126,15 @@ public class DCTelegraberPlugin extends Plugin
 		}
 	}
 
-	@Subscribe
-	public void onGameTick(GameTick tick)
+	@Override
+	protected int loop()
 	{
 
 		Player local = Players.getLocal();
 
 		if (local.getInteracting() != null && !Dialog.canContinue())
 		{
-			return;
+			return -1;
 		}
 
 		if (config.eat() && Combat.getHealthPercent() <= config.healthPercent())
@@ -140,178 +143,138 @@ public class DCTelegraberPlugin extends Plugin
 			if (food != null)
 			{
 				food.interact("Eat");
-				return;
+				return -3;
 			}
 		}
 
 		Player nearbyPlayer = Players.getNearest((p) -> !p.equals(local));
-		if (pker != null)
+		if (pker != null || nearbyPlayer != null)
 		{
 			log.info("nearby {}", nearbyPlayer.getName());
-			bank();
-			return;
+			return move();
 		}
 
 		List<String> itemsToLoot = List.of(config.loot().split(","));
-
-		Item alchItem = Inventory.getFirst(x -> x.getName() != null && !x.getName().equals("Nature rune") && itemsToLoot.contains(x.getName()));
-		if (alchItem != null && !local.isAnimating() && Regular.HIGH_LEVEL_ALCHEMY.canCast())
-		{
-
-			log.info("Casting high alchemy");
-			Magic.cast(Regular.HIGH_LEVEL_ALCHEMY, alchItem);
-			return;
-		}
 
 		if (!Inventory.isFull())
 		{
 			TileItem loot = TileItems.getNearest(x ->
 					x.getTile().getWorldLocation().distanceTo(local.getWorldLocation()) < config.lootRange()
-							&& ((x.getName() != null && itemsToLoot.contains(x.getName())
+							&& ((x.getName() != null && itemsToLoot.contains(x.getName()) && !x.getName().equals("Coins")
 							|| (config.lootValue() > -1 && itemManager.getItemPrice(x.getId()) * x.getQuantity() > config.lootValue())
 							|| (config.untradables() && (!x.isTradable()) || x.hasInventoryAction("Destroy"))))
 			);
 
 			if (loot != null)
 			{
-				if (Regular.TELEKINETIC_GRAB.canCast() && Inventory.getCount(true, ItemID.LAW_RUNE) > 2)
+				if (Inventory.getCount(true, ItemID.LAW_RUNE) > 2)
 				{
-
-//					log.info("LOOTING >> anim {}, idle {}, proj {}, loot {} ", local.isAnimating(), local.isIdle(), teleGrabProjectile != null, lootedItem != null);
-
-					if (local.isIdle() && teleGrabProjectile == null)
-					{
-
-						grab(loot);
-					}
+					grab(loot);
+					return -3;
 				}
 				else
 				{
-					bank();
+					return move();
 				}
 			}
-			else if (Inventory.getCount(true, ItemID.LAW_RUNE) <= 2)
+			else if (Inventory.getCount(true, ItemID.LAW_RUNE) <= 2) // used the last law rune, time to leave
 			{
-				bank();
+				return move();
 			}
-			else if (Regular.TELEKINETIC_GRAB.canCast() && config.noLoot())
+			else if (Inventory.getCount(true, ItemID.NATURE_RUNE) > 0) // still good, time to hop
 			{
-				NATURE_RUNE_WORLD_POINT = new WorldPoint(3302, 3855, 0);
-				if (local.distanceTo(NATURE_RUNE_WORLD_POINT) > 1)
-				{
-					if (!Movement.isWalking())
-					{
-						log.info("~~STARTING ROUTE~~");
-						log.info("START >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
-
-						Movement.walkTo(NATURE_RUNE_WORLD_POINT);
-					}
-					return;
-				}
-
+				// open the hopper if it isn't already
+				// in case there is a problem (onchatmessage) will null quickhopworld
 				if (Worlds.isHopperOpen() && quickHopWorld == null)
 				{
-					if (lootedItem != null)
-					{
-						lootedItem = null;
-						return;
-					}
 					log.info("HOPPING >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
 					clientThread.invoke(this::hop);
+					return -2;
 				}
-				else if (quickHopWorld == null)
+				else
 				{
+					// open to world switcher and try again.
 					log.info("HOPPER CLOSED >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
 					Worlds.loadWorlds();
-//					quickHopWorld = null;
+					return -1;
 				}
-
+			}
+			else if (local.distanceTo(NATURE_RUNE_WORLD_POINT) > 1) // no loot near, out of laws, no natures. start over
+			{
+				log.info("~~STARTING ROUTE~~");
+				Movement.walkTo(NATURE_RUNE_WORLD_POINT);
+				return -4;
 			}
 		}
-		else
-		{
-			bank();
-		}
+		// all else fails, go back to the bank
+		return move();
 	}
 
-	private void bank()
+	private int bank()
 	{
-		Player local = Game.getClient().getLocalPlayer();
-//		log.info("BANKING >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
-
-		if (Movement.isWalking() || !local.isIdle())
-		{
-			return;
-		}
-
-
-		TileObject bankObject = TileObjects.getNearest((x) -> x.hasAction("Bank"));
-
-		if (bankObject == null)
-		{
-			log.info("Walking to bank area");
-			Movement.walkTo(BankLocation.getNearest());
-			return;
-		}
-
-		if (bankObject.distanceTo(Game.getClient().getLocalPlayer().getWorldLocation()) > 1)
-		{
-			log.info("finding bank booth");
-//			Movement.walkTo(bankObject.getWorldLocation());
-			bankObject.interact("Bank");
-			return;
-		}
-
-		if (!Bank.isOpen())
-		{
-			log.info("Opening bank");
-			bankObject.interact("Bank");
-			return;
-		}
-
-
 		int natureRunes = Inventory.getCount(true,ItemID.NATURE_RUNE);
 		if (natureRunes > 0)
 		{
 			Bank.depositAllExcept(ItemID.LAW_RUNE, ItemID.ENERGY_POTION4, ItemID.LOBSTER, ItemID.FIRE_RUNE);
 			log.info("depositing nature runes");
-			return;
+			return -1;
 		}
 
 		final int lawsNeeded = 500 - Inventory.getCount(true, ItemID.LAW_RUNE);
 		final int energyNeeded = 6 - Inventory.getCount((x) -> x.getName().contains("Energy potion"));
 		final boolean fireNeeded = Inventory.getCount(true, ItemID.FIRE_RUNE) < 5;
 
-
 		if (lawsNeeded > 0)
 		{
 			log.info("Withdrawing {} laws", lawsNeeded);
 			Bank.withdraw(ItemID.LAW_RUNE, lawsNeeded, Bank.WithdrawMode.ITEM);
+			return -1;
 		}
 		else if (fireNeeded)
 		{
 			log.info("Withdrawing 50 fire runes");
 			Bank.withdraw(ItemID.FIRE_RUNE, 50, Bank.WithdrawMode.ITEM);
+			return -1;
 		}
 		else if (energyNeeded > 0)
 		{
 			log.info("Withdrawing {} energy pots", energyNeeded);
-			Bank.withdraw(ItemID.ENERGY_POTION4, energyNeeded, Bank.WithdrawMode.NOTED);
+			Bank.withdraw(ItemID.ENERGY_POTION4, energyNeeded, Bank.WithdrawMode.ITEM);
+			return -2;
 		}
 		else
 		{
 			final int lobsterNeeded = Inventory.getFreeSlots() - 3;
 			Bank.withdraw(ItemID.LOBSTER, lobsterNeeded, Bank.WithdrawMode.DEFAULT);
+			return -2;
 		}
-
 	}
 
-	private void move()
+	private int move()
 	{
-		BankLocation bankLocation = BankLocation.getNearest();
 		TileObject bankObject = TileObjects.getNearest((x) -> x.hasAction("Bank"));
 
-		Movement.walkTo(bankLocation);
+		if (bankObject == null)
+		{
+			log.info("Walking to bank area");
+			Movement.walkTo(BankLocation.getNearest());
+			return -4;
+		}
+
+		if (bankObject.distanceTo(Game.getClient().getLocalPlayer().getWorldLocation()) > 1)
+		{
+			log.info("finding bank booth");
+			bankObject.interact("Bank");
+			return -2;
+		}
+
+		if (!Bank.isOpen())
+		{
+			log.info("Opening bank");
+			bankObject.interact("Bank");
+		}
+
+		return bank();
 	}
 
 	private void hop() {
@@ -483,32 +446,21 @@ public class DCTelegraberPlugin extends Plugin
 	public void onItemSpawned(ItemSpawned itemSpawned)
 	{
 		TileItem item = itemSpawned.getItem();
-
-
 	}
-
 
 	private void grab(TileItem loot)
 	{
-		try
-		{
-			teleGrabProjectile = null;
-			lootedItem = null;
-			Magic.cast(Regular.TELEKINETIC_GRAB, loot);
-			log.info("casted telegrab on {} [id:{}]", loot.getName(), loot.getId());
-
-
-		}
-		catch (Exception ex)
-		{
-			log.error("error casting", ex.getMessage());
-		}
-		//		lootedItem = null;
+		Magic.cast(Regular.TELEKINETIC_GRAB, loot);
+		log.info("casted telegrab on {} [id:{}]", loot.getName(), loot.getId());
 	}
 
-
-
-
+	private void reset()
+	{
+		pker = null;
+		quickHopWorld = null;
+		teleGrabProjectile = null;
+		lootedItem = null;
+	}
 
 }
 
