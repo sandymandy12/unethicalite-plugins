@@ -13,6 +13,7 @@ import dev.unethicalite.api.magic.Magic;
 import dev.unethicalite.api.magic.Regular;
 import dev.unethicalite.api.movement.Movement;
 import dev.unethicalite.api.movement.Reachable;
+import dev.unethicalite.api.movement.pathfinder.BankLocation;
 import dev.unethicalite.api.plugins.LoopedPlugin;
 import dev.unethicalite.api.widgets.Dialog;
 import net.runelite.api.*;
@@ -87,10 +88,7 @@ public class DCTelegraberPlugin extends Plugin
 	public void onGameTick(GameTick tick)
 	{
 
-		if (Movement.isWalking())
-		{
-			return;
-		}
+
 		Player local = Players.getLocal();
 		List<String> itemsToLoot = List.of(config.loot().split(","));
 
@@ -110,13 +108,16 @@ public class DCTelegraberPlugin extends Plugin
 			}
 		}
 
+
 		Item alchItem = Inventory.getFirst(x -> x.getName() != null && itemsToLoot.contains(x.getName()));
-		if (alchItem != null)
+		if (alchItem != null && !local.isAnimating() && Regular.HIGH_LEVEL_ALCHEMY.canCast())
 		{
+
 			log.info("Casting high alchemy");
 			Magic.cast(Regular.HIGH_LEVEL_ALCHEMY, alchItem);
 			return ;
 		}
+
 		if (!Inventory.isFull())
 		{
 			TileItem loot = TileItems.getNearest(x ->
@@ -125,8 +126,14 @@ public class DCTelegraberPlugin extends Plugin
 							|| (config.lootValue() > -1 && itemManager.getItemPrice(x.getId()) * x.getQuantity() > config.lootValue())
 							|| (config.untradables() && (!x.isTradable()) || x.hasInventoryAction("Destroy"))))
 			);
-			if (loot != null && teleGrabProjectile == null)
+//			Player nearbyPlayer = Players.getNearest((p) -> !p.equals(local));
+//			Player nearbyPlayer = Game.getClient().getPlayers().stream().filter(p -> !p.equals(local)).findFirst().orElse(null);
+//			log.info("nearby {}", nearbyPlayer.getName());
+
+			if (loot != null)
 			{
+				log.info("anim {} {}, idle {}, loot {} ", local.getAnimation(), local.isAnimating(), local.isIdle(), (loot.getName()));
+
 				if (Regular.TELEKINETIC_GRAB.canCast())
 				{
 //					log.info("items >> {}" ,itemsToLoot.toString());
@@ -144,9 +151,8 @@ public class DCTelegraberPlugin extends Plugin
 
 
 			}
-			else if (Regular.TELEKINETIC_GRAB.canCast() && config.noLoot() && loot == null)
+			else if (Regular.TELEKINETIC_GRAB.canCast() && config.noLoot())
 			{
-
 
 				if (Worlds.isHopperOpen())
 				{
@@ -259,11 +265,17 @@ public class DCTelegraberPlugin extends Plugin
 		final int endCycle = projectile.getEndCycle();
 
 		Player caster = (Player) projectile.getInteracting().getInteracting();
+		Player target = (Player) projectile.getInteracting();
 
-		if (caster.equals(Game.getClient().getLocalPlayer()))
+		if (caster != null && !caster.equals(Game.getClient().getLocalPlayer()))
 		{
 			log.info("{} launched {}", caster.getName(), projectile.getId());
 		}
+		if (target != null && target.equals(Game.getClient().getLocalPlayer()))
+		{
+			log.info("You are being attacked");
+		}
+		log.info("projectile >> {}", projectile.getId());
 		if (projectile.getId() == 143)
 		{
 			log.info("telegrab sent");
@@ -275,6 +287,10 @@ public class DCTelegraberPlugin extends Plugin
 	@Subscribe
 	public void onChatMessage(ChatMessage e)
 	{
+		if (e.getMessage().equals("Please finish what you're doing before using the World Switcher."))
+		{
+
+		}
 
 	}
 
@@ -303,7 +319,7 @@ public class DCTelegraberPlugin extends Plugin
 		try
 		{
 			Magic.cast(Regular.TELEKINETIC_GRAB, loot);
-			log.info("casted telegrab on {} [id:{}]", loot.getName(), loot.getId());
+//			log.info("casted telegrab on {} [id:{}]", loot.getName(), loot.getId());
 
 		}
 		catch (Exception ex)

@@ -159,7 +159,7 @@ public class DCPKHopperPlugin extends Plugin
 	{
 		if (event.getType() == ChatMessageType.PUBLICCHAT &event.getMessage().contains("="))
 		{
-			hop(false);
+			clientThread.invoke(() -> hop(false));
 		}
 
 		if (event.getType() != ChatMessageType.GAMEMESSAGE)
@@ -362,21 +362,8 @@ public class DCPKHopperPlugin extends Plugin
 		{
 			log.info("Casting " + spell);
 			Magic.cast(spell);
+			return;
 		}
-//		for (Spell spell : Regular.values())
-//		{
-//			String name = spell.toString();
-//			if (name.equals("HOME_TELEPORT"))
-//			{
-//				continue;
-//			}
-//			if (name.contains("TELEPORT") && spell.canCast())
-//			{
-//				log.info("Casting " + spell);
-//				Magic.cast(spell);
-//				return;
-//			}
-//		}
 		log.info("No teleport spells to cast");
 	}
 }

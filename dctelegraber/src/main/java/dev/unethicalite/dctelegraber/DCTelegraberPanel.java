@@ -42,8 +42,9 @@ class DCTelegraberPanel extends OverlayPanel
         }
 
         boolean isIdle = client.getLocalPlayer().isIdle();
+
         panelComponent.getChildren().add(TitleComponent.builder()
-                .text("Telegraber" + (isIdle ? "" : "[doing]"))
+                .text("Telegraber [" + client.getLocalPlayer().getActionFrame() + "]")
                 .color(isIdle ? Color.cyan : Color.yellow)
                 .build());
 

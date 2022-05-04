@@ -27,7 +27,7 @@ rootProject.name = "unethicalite-plugins"
 
 include("dctelegraber")
 include("dcpkhopper")
-include("hoot-fighter")
+//include("hoot-fighter")
 include("hoot-oneclick")
 include("hoot-agility")
 include("hoot-autologin")
@@ -39,6 +39,7 @@ include("hoot-aerialfishing")
 include("hoot-chins")
 include("hoot-notifier")
 include("hoot-butler")
+include("unethical-prayer")
 //include("kebab-buyer-script")
 //include("example-kotlin")
 
