@@ -1,6 +1,9 @@
 package dev.unethicalite.dctelegraber;
 
+import dev.unethicalite.api.movement.Movement;
+import dev.unethicalite.api.*;
 import net.runelite.api.Client;
+import net.runelite.api.TileItem;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -35,28 +38,34 @@ class DCTelegraberPanel extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics) {
         {
-
-
-            panelComponent.getChildren().add(TitleComponent.builder()
-                    .text("PK Hopper")
-                    .color(Color.cyan)
-                    .build());
-
-
-            panelComponent.getChildren().add(LineComponent.builder()
-                    .left("Hopping:")
-                    .leftColor(Color.LIGHT_GRAY)
-                    .right("")
-                    .rightColor(Color.ORANGE)
-                    .build());
-
-            panelComponent.getChildren().add(LineComponent.builder()
-                    .left("Target world")
-                    .leftColor(Color.LIGHT_GRAY)
-                    .right("")
-                    .rightColor(Color.GREEN)
-                    .build());
         }
+        panelComponent.getChildren().add(TitleComponent.builder()
+                .text("Telegraber")
+                .color(Color.cyan)
+                .build());
+
+
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left("Projectile:")
+                .leftColor(Color.LIGHT_GRAY)
+                .right(plugin.teleGrabProjectile == null ? "none" : plugin.teleGrabProjectile.getId()+"")
+                .rightColor(Color.ORANGE)
+                .build());
+
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left("Cycles:")
+                .leftColor(Color.LIGHT_GRAY)
+                .right(plugin.teleGrabProjectile != null ? String.valueOf(plugin.teleGrabProjectile.getEndCycle()) : "0")
+                .rightColor(Color.GREEN)
+                .build());
+
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left(plugin.lootedItem != null ? String.valueOf(plugin.lootedItem.getItemId()) : "no loot")
+                .leftColor(Movement.isWalking() ? Color.ORANGE : Color.LIGHT_GRAY)
+                .right("")
+                .rightColor(Color.GREEN)
+                .build());
+
         return super.render(graphics);
     }
 }

@@ -20,6 +20,7 @@ import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -38,7 +39,7 @@ import java.util.concurrent.ScheduledExecutorService;
 )
 @Slf4j
 @Extension
-public class DCTelegraberPlugin extends LoopedPlugin
+public class DCTelegraberPlugin extends Plugin
 {
 	private ScheduledExecutorService executor;
 	
@@ -57,12 +58,12 @@ public class DCTelegraberPlugin extends LoopedPlugin
 	@Inject
 	OverlayManager overlayManager;
 
-	public Projectile teleGrabProjectile;
+	public Projectile teleGrabProjectile = null;
+	public ItemObtained lootedItem;
 
 	@Override
 	public void startUp() throws Exception
 	{
-		super.startUp();
 		overlayManager.add(dcTelegraberPanel);
 	}
 
@@ -75,21 +76,20 @@ public class DCTelegraberPlugin extends LoopedPlugin
 	@Override
 	public void shutDown() throws Exception
 	{
-		super.shutDown();
-		if (executor != null)
-		{
-			executor.shutdown();
-		}
 		overlayManager.remove(dcTelegraberPanel);
-
-
 	}
 
-	@Override
-	protected int loop()
+	@Subscribe
+	public void onGameTick(GameTick tick)
 	{
+
+		if (Movement.isWalking())
+		{
+			return;
+		}
 		Player local = Players.getLocal();
 		List<String> itemsToLoot = List.of(config.loot().split(","));
+
 		if (!Inventory.isFull())
 		{
 			TileItem loot = TileItems.getNearest(x ->
@@ -98,30 +98,43 @@ public class DCTelegraberPlugin extends LoopedPlugin
 							|| (config.lootValue() > -1 && itemManager.getItemPrice(x.getId()) * x.getQuantity() > config.lootValue())
 							|| (config.untradables() && (!x.isTradable()) || x.hasInventoryAction("Destroy"))))
 			);
-			if (loot != null)
+			if (loot != null && teleGrabProjectile != null)
 			{
 				if (Regular.TELEKINETIC_GRAB.canCast())
 				{
-					log.info("telegrabbing " + loot.getName());
-					Magic.cast(Regular.TELEKINETIC_GRAB, loot);
-					return -2;
+//					log.info("telegrabbing " + loot.getName());
+//					log.info("items >> {}" ,itemsToLoot.toString());
+
+//					Magic.cast(Regular.TELEKINETIC_GRAB, loot);
+					return;
 				}
 				else if (!Reachable.isInteractable(loot.getTile()))
 				{
 					Movement.walkTo(loot.getTile().getWorldLocation());
-					return -4;
+					return;
 				}
 				loot.pickup();
-				return -3;
+				return;
 
 
-			} else if (Regular.TELEKINETIC_GRAB.canCast() && config.noLoot())
+			}
+			else if (Regular.TELEKINETIC_GRAB.canCast() && config.noLoot() && loot != null && teleGrabProjectile == null)
 			{
-				clientThread.invoke(() -> hop());
-				return -1;
+
+				log.info("calling grab function");
+				clientThread.invoke(() -> grab(loot));
+
+				if (Worlds.isHopperOpen())
+				{
+					clientThread.invoke(this::hop);
+				}
+				else
+				{
+				}
+				return;
 			}
 		}
-		return -1;
+		return;
 	}
 
 	private void hop() {
@@ -220,6 +233,14 @@ public class DCTelegraberPlugin extends LoopedPlugin
 	{
 		final Projectile projectile = projectileMoved.getProjectile();
 		final int endCycle = projectile.getEndCycle();
+
+		if (projectile.getId() == 143)
+		{
+			log.info("telegrab sent");
+			teleGrabProjectile = projectile;
+		}
+		log.info("projectile launched {}", projectile.getId());
+
 	}
 
 	@Subscribe
@@ -231,8 +252,31 @@ public class DCTelegraberPlugin extends LoopedPlugin
 	@Subscribe
 	public void onItemObtained(ItemObtained itemObtained)
 	{
-
+		lootedItem = itemObtained;
 	}
+
+	@Subscribe
+	public void onItemSpawned(ItemSpawned itemSpawned)
+	{
+		TileItem item = itemSpawned.getItem();
+		log.info("{} spawned",item.getName());
+
+		if (!item.getName().contains("Iron mace"))
+		{
+			return;
+		}
+		clientThread.invoke(() -> grab(item));
+	}
+
+
+	private void grab(TileItem loot)
+	{
+		Magic.cast(Regular.TELEKINETIC_GRAB, loot);
+	}
+
+
+
+
 
 }
 
