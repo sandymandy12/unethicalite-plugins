@@ -34,6 +34,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import org.pf4j.Extension;
 
 import javax.inject.Inject;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -97,23 +98,28 @@ public class DCTelegraberPlugin extends Plugin
 	public void onGameStateChanged(GameStateChanged gameStateChanged)
 	{
 		GameState gameState = gameStateChanged.getGameState();
-		if (gameState == GameState.LOADING)
+		if (gameState == GameState.HOPPING)
 		{
-			log.info("World hopped");
 			pker = null;
 			quickHopWorld = null;
+			lootedItem = null;
 
 		}
 		if (gameState == GameState.LOGGED_IN)
 		{
 			Worlds.loadWorlds();
 		}
+		log.info("Gamestate changed {}", gameState);
 	}
 
 	@Subscribe
 	public void onPlayerSpawned(PlayerSpawned playerSpawned)
 	{
 
+		if (withinRange(playerSpawned.getPlayer()))
+		{
+			pker = playerSpawned.getPlayer();
+		}
 	}
 
 	@Subscribe
@@ -138,10 +144,10 @@ public class DCTelegraberPlugin extends Plugin
 		}
 
 		Player nearbyPlayer = Players.getNearest((p) -> !p.equals(local));
-		if (withinRange(nearbyPlayer))
+		if (pker != null)
 		{
 			log.info("nearby {}", nearbyPlayer.getName());
-			clientThread.invoke(this::hop);
+			return;
 		}
 
 		List<String> itemsToLoot = List.of(config.loot().split(","));
@@ -166,32 +172,49 @@ public class DCTelegraberPlugin extends Plugin
 
 			if (loot != null)
 			{
-//				log.info("LOOTING >> anim {} {}, idle {}, loot {} ", local.getAnimation(), local.isAnimating(), local.isIdle(), lootedItem != null);
-
-				if (Regular.TELEKINETIC_GRAB.canCast() && (!local.isAnimating() || lootedItem != null))
+				if (Regular.TELEKINETIC_GRAB.canCast() && Inventory.getCount(true, ItemID.LAW_RUNE) > 2)
 				{
-					grab(loot);
-					return;
+
+					if (local.isIdle() && teleGrabProjectile == null)
+					{
+//						log.info("LOOTING >> anim {}, idle {}, proj {}, loot {} ", local.isAnimating(), local.isIdle(), teleGrabProjectile != null, lootedItem != null);
+						grab(loot);
+					}
 				}
+				else
+				{
+					bank();
+				}
+			}
+			else if (Inventory.getCount(true, ItemID.LAW_RUNE) <= 2)
+			{
+				bank();
 			}
 			else if (Regular.TELEKINETIC_GRAB.canCast() && config.noLoot())
 			{
-				NATURE_RUNE_WORLD_POINT = new WorldPoint(3110, 3514, 0);
-				if (local.distanceTo(NATURE_RUNE_WORLD_POINT) > 2)
+				NATURE_RUNE_WORLD_POINT = new WorldPoint(3302, 3855, 0);
+				if (local.distanceTo(NATURE_RUNE_WORLD_POINT) > 1)
 				{
-					Movement.walkTo(NATURE_RUNE_WORLD_POINT);
+					if (!Movement.isWalking())
+					{
+						log.info("~~STARTING ROUTE~~");
+						log.info("START >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
+
+						Movement.walkTo(NATURE_RUNE_WORLD_POINT);
+					}
 					return;
 				}
 
 				if (Worlds.isHopperOpen() && quickHopWorld == null)
 				{
-					log.info("HOPPING >> anim {} {}, idle {}, loot {}, quickWorld {}", local.getAnimation(), local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
+					log.info("HOPPING >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
 					clientThread.invoke(this::hop);
 				}
-				else
+				else if (quickHopWorld == null)
 				{
+					log.info("HOPPER CLOSED >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
 					Worlds.loadWorlds();
-					quickHopWorld = null;
+//					quickHopWorld = null;
 				}
 
 			}
@@ -205,10 +228,13 @@ public class DCTelegraberPlugin extends Plugin
 	private void bank()
 	{
 		Player local = Game.getClient().getLocalPlayer();
+//		log.info("BANKING >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
+
 		if (Movement.isWalking() || !local.isIdle())
 		{
 			return;
 		}
+
 
 		TileObject bankObject = TileObjects.getNearest((x) -> x.hasAction("Bank"));
 
@@ -237,25 +263,30 @@ public class DCTelegraberPlugin extends Plugin
 
 		if (!Bank.isMainTabOpen())
 		{
+			log.info("main tab not open");
 			Bank.openMainTab();
 			return;
 		}
 
-		Bank.depositAllExcept(ItemID.LAW_RUNE, ItemID.ENERGY_POTION4, ItemID.LOBSTER, ItemID.FIRE_RUNE);
+//		log.info(Inventory.getAll().toString());
+//		Bank.depositAllExcept(ItemID.LAW_RUNE, ItemID.ENERGY_POTION4, ItemID.LOBSTER, ItemID.FIRE_RUNE);
+//		Bank.deposit(ItemID.NATURE_RUNE, 1000000);
 
-		final int lawsNeeded = 250 - Inventory.getCount("Law Rune");
+//		Bank.depositInventory();
+//		Bank.deposit(ItemID.LAW_RUNE, 1);
+
+
+		final int lawsNeeded = 250 - Inventory.getCount(true, ItemID.LAW_RUNE);
 		final int energyNeeded = 4 - Inventory.getCount((x) -> x.getName().contains("Energy potion"));
 
-		log.info("Withdrawing {} laws, {} energy pots", lawsNeeded, energyNeeded);
+//		log.info("Withdrawing {} laws, {} energy pots", lawsNeeded, energyNeeded);
 
-		Bank.withdraw(ItemID.LAW_RUNE, lawsNeeded, Bank.WithdrawMode.DEFAULT);
-		Bank.withdraw(ItemID.ENERGY_POTION4, energyNeeded, Bank.WithdrawMode.DEFAULT);
+//		Bank.withdraw(ItemID.LAW_RUNE, lawsNeeded, Bank.WithdrawMode.DEFAULT);
+//		Bank.withdraw(ItemID.ENERGY_POTION4, energyNeeded, Bank.WithdrawMode.DEFAULT);
 
 		// save at least 1 slot
-		final int lobsterNeeded = Inventory.getFreeSlots() - 1;
-		Bank.withdraw(ItemID.LOBSTER, lobsterNeeded, Bank.WithdrawMode.DEFAULT);
-
-		Bank.close();
+//		final int lobsterNeeded = Inventory.getFreeSlots() - 1;
+//		Bank.withdraw(ItemID.LOBSTER, lobsterNeeded, Bank.WithdrawMode.DEFAULT);
 	}
 
 	private void move()
@@ -272,7 +303,7 @@ public class DCTelegraberPlugin extends Plugin
 			return;
 		}
 
-		Worlds.loadWorlds();
+		quickHopWorld = null;
 		HashSet<World> attempted = new HashSet<World>();
 		attempted.add(Worlds.getCurrentWorld());
 
@@ -384,22 +415,23 @@ public class DCTelegraberPlugin extends Plugin
 	{
 		final Projectile projectile = projectileMoved.getProjectile();
 
-		Player caster = (Player) projectile.getInteracting().getInteracting();
-		Player target = (Player) projectile.getInteracting();
+//		Player caster = (Player) projectile.getInteracting().getInteracting();
+//		Player target = (Player) projectile.getInteracting();
 
-		if (caster != null && !caster.equals(Game.getClient().getLocalPlayer()))
-		{
-			log.info("{} launched {}", caster.getName(), projectile.getId());
-		}
-		if (target != null && target.equals(Game.getClient().getLocalPlayer()))
-		{
-			log.info("You are being attacked");
-		}
-		log.info("projectile >> {}", projectile.getId());
+//		if (caster != null && !caster.equals(Game.getClient().getLocalPlayer()))
+//		{
+//			log.info("{} launched {}", caster.getName(), projectile.getId());
+//		}
+//		if (target != null && target.equals(Game.getClient().getLocalPlayer()))
+//		{/\
+//			log.info("You are being attacked");
+//		}
 		if (projectile.getId() == 143)
 		{
 			log.info("telegrab sent");
+//			lootedItem = null;
 			teleGrabProjectile = projectile;
+
 		}
 
 	}
@@ -415,7 +447,9 @@ public class DCTelegraberPlugin extends Plugin
 		Player local = Players.getLocal();
 		if (e.getMessage().equals("Please finish what you're doing before using the World Switcher."))
 		{
-			log.info("Chat message >> anim {} {}, idle {} ", local.getAnimation(), local.isAnimating(), local.isIdle());
+			log.info("Chat message >> anim {}, idle {}, loot {}, quickWorld {} ", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
+			quickHopWorld = null;
+
 		}
 
 	}
@@ -425,6 +459,7 @@ public class DCTelegraberPlugin extends Plugin
 	{
 		lootedItem = itemObtained;
 		teleGrabProjectile = null;
+		log.info("item obtained");
 	}
 
 	@Subscribe
@@ -440,9 +475,11 @@ public class DCTelegraberPlugin extends Plugin
 	{
 		try
 		{
+			teleGrabProjectile = null;
+			lootedItem = null;
 			Magic.cast(Regular.TELEKINETIC_GRAB, loot);
 			log.info("casted telegrab on {} [id:{}]", loot.getName(), loot.getId());
-			lootedItem = null;
+
 
 		}
 		catch (Exception ex)

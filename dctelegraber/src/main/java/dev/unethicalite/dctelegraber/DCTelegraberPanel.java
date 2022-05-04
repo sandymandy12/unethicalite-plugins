@@ -44,7 +44,7 @@ class DCTelegraberPanel extends OverlayPanel
         {
         }
 
-        final Player pker = Players.getNearest((plugin::withinRange));
+//        final Player pker = Players.getNearest((plugin::withinRange));
         final String qhw = plugin.quickHopWorld == null ? "no target" : plugin.quickHopWorld.getId()+"" ;
         boolean isIdle = Game.getClient().getLocalPlayer().isIdle();
 
@@ -57,14 +57,14 @@ class DCTelegraberPanel extends OverlayPanel
         panelComponent.getChildren().add(LineComponent.builder()
                 .left("Projectile:")
                 .leftColor(Color.LIGHT_GRAY)
-                .right(plugin.teleGrabProjectile == null ? "none" : plugin.teleGrabProjectile.getId()+"")
+                .right(plugin.teleGrabProjectile == null ? "none" : plugin.teleGrabProjectile.getEndCycle()+"")
                 .rightColor(Color.ORANGE)
                 .build());
 
         panelComponent.getChildren().add(LineComponent.builder()
                 .left("Hop")
                 .leftColor(Color.LIGHT_GRAY)
-                .right(qhw)
+                .right(plugin.quickHopWorld == null ? "0" : plugin.quickHopWorld.getId()+"" )
                 .rightColor(Color.GREEN)
                 .build());
 
