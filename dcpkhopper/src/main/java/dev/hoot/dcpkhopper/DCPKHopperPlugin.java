@@ -94,7 +94,6 @@ public class DCPKHopperPlugin extends Plugin
 		overlayManager.add(dcpkHopperPanel);
 		keyManager.registerKeyListener(hopKeyListener);
 		keyManager.registerKeyListener(teleKeyListener);
-		Worlds.loadWorlds();
 	}
 
 	@Override
@@ -157,7 +156,7 @@ public class DCPKHopperPlugin extends Plugin
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
-		if (event.getType() == ChatMessageType.PUBLICCHAT &event.getMessage().contains("="))
+		if (event.getType() == ChatMessageType.PUBLICCHAT && event.getMessage().contains("="))
 		{
 			clientThread.invoke(() -> hop(false));
 		}
@@ -187,6 +186,10 @@ public class DCPKHopperPlugin extends Plugin
 //			log.info("Game state changed " + event.getGameState());
 			resetQuickHopper();
 			hopping = false;
+		}
+		if (event.getGameState() == GameState.LOGGED_IN)
+		{
+			Worlds.loadWorlds();
 		}
 	}
 
