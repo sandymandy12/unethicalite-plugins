@@ -69,6 +69,36 @@ public interface DCTelegraberConfig extends Config
 		return false;
 	}
 
+	@ConfigSection(
+			name = "Health",
+			description = "General settings",
+			position = 5,
+			closedByDefault = true
+	)
+	String health = "Health";
+
+	@Range(max = 100)
+	@ConfigItem(
+			keyName = "eatHealthPercent",
+			name = "Health %",
+			description = "Health % to eat at",
+			position = 6
+	)
+	default int healthPercent()
+	{
+		return 65;
+	}
+
+	@ConfigItem(
+			keyName = "eat",
+			name = "Eat food",
+			description = "Eat food to heal",
+			position = 7
+	)
+	default boolean eat()
+	{
+		return true;
+	}
 
 }
 

@@ -1,9 +1,11 @@
 package dev.unethicalite.dctelegraber;
 
 import com.google.inject.Provides;
+import dev.unethicalite.api.entities.NPCs;
 import dev.unethicalite.api.entities.Players;
 import dev.unethicalite.api.entities.TileItems;
 import dev.unethicalite.api.events.*;
+import dev.unethicalite.api.game.Combat;
 import dev.unethicalite.api.game.Game;
 import dev.unethicalite.api.game.Worlds;
 import dev.unethicalite.api.items.Inventory;
@@ -12,6 +14,7 @@ import dev.unethicalite.api.magic.Regular;
 import dev.unethicalite.api.movement.Movement;
 import dev.unethicalite.api.movement.Reachable;
 import dev.unethicalite.api.plugins.LoopedPlugin;
+import dev.unethicalite.api.widgets.Dialog;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
 import net.runelite.client.callback.ClientThread;
@@ -27,6 +30,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import org.pf4j.Extension;
 
 import javax.inject.Inject;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -90,6 +94,29 @@ public class DCTelegraberPlugin extends Plugin
 		Player local = Players.getLocal();
 		List<String> itemsToLoot = List.of(config.loot().split(","));
 
+		if (local.getInteracting() != null && !Dialog.canContinue())
+		{
+			return;
+		}
+
+
+		if (config.eat() && Combat.getHealthPercent() <= config.healthPercent())
+		{
+			Item food = Inventory.getFirst(x -> (x.getName() != null && x.hasAction("Eat")));
+			if (food != null)
+			{
+				food.interact("Eat");
+				return;
+			}
+		}
+
+		Item alchItem = Inventory.getFirst(x -> x.getName() != null && itemsToLoot.contains(x.getName()));
+		if (alchItem != null)
+		{
+			log.info("Casting high alchemy");
+			Magic.cast(Regular.HIGH_LEVEL_ALCHEMY, alchItem);
+			return ;
+		}
 		if (!Inventory.isFull())
 		{
 			TileItem loot = TileItems.getNearest(x ->
@@ -98,13 +125,12 @@ public class DCTelegraberPlugin extends Plugin
 							|| (config.lootValue() > -1 && itemManager.getItemPrice(x.getId()) * x.getQuantity() > config.lootValue())
 							|| (config.untradables() && (!x.isTradable()) || x.hasInventoryAction("Destroy"))))
 			);
-			if (loot != null && teleGrabProjectile != null)
+			if (loot != null && teleGrabProjectile == null)
 			{
 				if (Regular.TELEKINETIC_GRAB.canCast())
 				{
-//					log.info("telegrabbing " + loot.getName());
 //					log.info("items >> {}" ,itemsToLoot.toString());
-
+					grab(loot);
 //					Magic.cast(Regular.TELEKINETIC_GRAB, loot);
 					return;
 				}
@@ -118,11 +144,9 @@ public class DCTelegraberPlugin extends Plugin
 
 
 			}
-			else if (Regular.TELEKINETIC_GRAB.canCast() && config.noLoot() && loot != null && teleGrabProjectile == null)
+			else if (Regular.TELEKINETIC_GRAB.canCast() && config.noLoot() && loot == null)
 			{
 
-				log.info("calling grab function");
-				clientThread.invoke(() -> grab(loot));
 
 				if (Worlds.isHopperOpen())
 				{
@@ -130,11 +154,11 @@ public class DCTelegraberPlugin extends Plugin
 				}
 				else
 				{
+					Worlds.loadWorlds();
 				}
-				return;
+
 			}
 		}
-		return;
 	}
 
 	private void hop() {
@@ -234,12 +258,17 @@ public class DCTelegraberPlugin extends Plugin
 		final Projectile projectile = projectileMoved.getProjectile();
 		final int endCycle = projectile.getEndCycle();
 
+		Player caster = (Player) projectile.getInteracting().getInteracting();
+
+		if (caster.equals(Game.getClient().getLocalPlayer()))
+		{
+			log.info("{} launched {}", caster.getName(), projectile.getId());
+		}
 		if (projectile.getId() == 143)
 		{
 			log.info("telegrab sent");
 			teleGrabProjectile = projectile;
 		}
-		log.info("projectile launched {}", projectile.getId());
 
 	}
 
@@ -253,6 +282,7 @@ public class DCTelegraberPlugin extends Plugin
 	public void onItemObtained(ItemObtained itemObtained)
 	{
 		lootedItem = itemObtained;
+		teleGrabProjectile = null;
 	}
 
 	@Subscribe
@@ -265,13 +295,22 @@ public class DCTelegraberPlugin extends Plugin
 		{
 			return;
 		}
-		clientThread.invoke(() -> grab(item));
 	}
 
 
 	private void grab(TileItem loot)
 	{
-		Magic.cast(Regular.TELEKINETIC_GRAB, loot);
+		try
+		{
+			Magic.cast(Regular.TELEKINETIC_GRAB, loot);
+			log.info("casted telegrab on {} [id:{}]", loot.getName(), loot.getId());
+
+		}
+		catch (Exception ex)
+		{
+			log.error("error casting", ex.getMessage());
+		}
+		//		lootedItem = null;
 	}
 
 

@@ -25,8 +25,10 @@ import org.pf4j.Extension;
 
 import dev.unethicalite.api.game.*;
 
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.List;
 
 @PluginDescriptor(
 		name = "DC PK Hopper",
@@ -350,20 +352,31 @@ public class DCPKHopperPlugin extends Plugin
 	}
 	private void teleport()
 	{
-		for (Spell spell : Regular.values())
+
+		 Spell spell = Arrays.stream(Regular.values()).filter((s) ->
+				(!s.toString().equals("HOME_TELEPORT"))
+				&& (s.toString().contains("TELEPORT") && s.canCast()))
+				 .findFirst().orElse(null);
+
+		if (spell != null)
 		{
-			String name = spell.toString();
-			if (name.equals("HOME_TELEPORT"))
-			{
-				continue;
-			}
-			if (name.contains("TELEPORT") && spell.canCast())
-			{
-				log.info("Casting " + spell);
-				Magic.cast(spell);
-				return;
-			}
+			log.info("Casting " + spell);
+			Magic.cast(spell);
 		}
+//		for (Spell spell : Regular.values())
+//		{
+//			String name = spell.toString();
+//			if (name.equals("HOME_TELEPORT"))
+//			{
+//				continue;
+//			}
+//			if (name.contains("TELEPORT") && spell.canCast())
+//			{
+//				log.info("Casting " + spell);
+//				Magic.cast(spell);
+//				return;
+//			}
+//		}
 		log.info("No teleport spells to cast");
 	}
 }

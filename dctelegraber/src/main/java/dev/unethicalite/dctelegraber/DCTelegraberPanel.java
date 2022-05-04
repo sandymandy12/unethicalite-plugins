@@ -1,5 +1,6 @@
 package dev.unethicalite.dctelegraber;
 
+import dev.unethicalite.api.entities.TileItems;
 import dev.unethicalite.api.movement.Movement;
 import dev.unethicalite.api.*;
 import net.runelite.api.Client;
@@ -39,9 +40,11 @@ class DCTelegraberPanel extends OverlayPanel
     public Dimension render(Graphics2D graphics) {
         {
         }
+
+        boolean isIdle = client.getLocalPlayer().isIdle();
         panelComponent.getChildren().add(TitleComponent.builder()
-                .text("Telegraber")
-                .color(Color.cyan)
+                .text("Telegraber" + (isIdle ? "" : "[doing]"))
+                .color(isIdle ? Color.cyan : Color.yellow)
                 .build());
 
 
@@ -60,9 +63,9 @@ class DCTelegraberPanel extends OverlayPanel
                 .build());
 
         panelComponent.getChildren().add(LineComponent.builder()
-                .left(plugin.lootedItem != null ? String.valueOf(plugin.lootedItem.getItemId()) : "no loot")
+                .right(plugin.lootedItem != null ? String.valueOf(plugin.lootedItem.getItemId()) : "no loot")
                 .leftColor(Movement.isWalking() ? Color.ORANGE : Color.LIGHT_GRAY)
-                .right("")
+                .left("Looted item")
                 .rightColor(Color.GREEN)
                 .build());
 
