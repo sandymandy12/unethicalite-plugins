@@ -147,7 +147,7 @@ public class DCTelegraberPlugin extends LoopedPlugin
 			}
 		}
 
-		if (Movement.getRunEnergy() < 50)
+		if (Movement.getRunEnergy() < 50 && Movement.isRunEnabled())
 		{
 			Item potion = Inventory.getFirst(x -> (x.getName() != null && x.getName().contains("Energy")));
 			if (potion != null)
@@ -172,13 +172,13 @@ public class DCTelegraberPlugin extends LoopedPlugin
 		{
 			return -4;
 		}
-		List<String> itemsToLoot = List.of(config.loot().split(","));
 
+		List<String> itemsToLoot = List.of(config.loot().split(","));
 		if (!Inventory.isFull())
 		{
 			TileItem loot = TileItems.getNearest(x ->
 					x.getTile().getWorldLocation().distanceTo(local.getWorldLocation()) < config.lootRange()
-							&& ((x.getName() != null && (itemsToLoot.contains(x.getName()) || !x.getName().equals("Coins"))
+							&& ((x.getName() != null && itemsToLoot.contains(x.getName())
 							|| (config.lootValue() > -1 && itemManager.getItemPrice(x.getId()) * x.getQuantity() > config.lootValue())))
 			);
 
@@ -218,7 +218,6 @@ public class DCTelegraberPlugin extends LoopedPlugin
 			}
 			else if (local.distanceTo(NATURE_RUNE_WORLD_POINT) > 1) // no loot near, out of laws, no natures. start over
 			{
-				log.info("~~STARTING ROUTE~~");
 				Movement.walkTo(NATURE_RUNE_WORLD_POINT);
 				return -4;
 			}
@@ -455,9 +454,7 @@ public class DCTelegraberPlugin extends LoopedPlugin
 	@Subscribe
 	public void onItemObtained(ItemObtained itemObtained)
 	{
-		lootedItem = itemObtained;
-		teleGrabProjectile = null;
-		log.info("item obtained");
+
 	}
 
 	@Subscribe
