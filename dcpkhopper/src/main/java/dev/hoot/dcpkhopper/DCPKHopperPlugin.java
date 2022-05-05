@@ -114,40 +114,18 @@ public class DCPKHopperPlugin extends Plugin
 			return;
 		}
 
-		if (quickHopTargetWorld == null && hopping)
+		if (quickHopTargetWorld == null)
 		{
 			log.info("invoking hop");
 			clientThread.invoke(() -> hop(true));
 		}
 
-		if (quickHopTargetWorld == null)
-		{
-			return;
-		}
-
 		if (!Worlds.isHopperOpen())
 		{
 			Worlds.loadWorlds();
-			if (++displaySwitcherAttempts >= DISPLAY_SWITCHER_MAX_ATTEMPTS) {
-
-				String chatMessage = new ChatMessageBuilder()
-						.append(ChatColorType.NORMAL)
-						.append("Failed to quick-hop after ")
-						.append(ChatColorType.HIGHLIGHT)
-						.append(Integer.toString(displaySwitcherAttempts))
-						.append(ChatColorType.NORMAL)
-						.append(" attempts.")
-						.build();
-
-				chatMessageManager
-						.queue(QueuedMessage.builder()
-								.type(ChatMessageType.CONSOLE)
-								.runeLiteFormattedMessage(chatMessage)
-								.build());
-
-			}
 		}
-		else {
+		else
+		{
 			Worlds.hopTo(quickHopTargetWorld);
 		}
 
