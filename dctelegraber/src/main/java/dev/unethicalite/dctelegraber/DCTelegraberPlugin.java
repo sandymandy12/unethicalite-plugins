@@ -133,6 +133,8 @@ public class DCTelegraberPlugin extends LoopedPlugin
 
 		Player local = Players.getLocal();
 
+//		log.info("Widgets {}",Game.getClient().getWidgets().length);
+
 		if (local.getInteracting() != null && !Dialog.canContinue())
 		{
 			return -1;
@@ -145,6 +147,16 @@ public class DCTelegraberPlugin extends LoopedPlugin
 			{
 				food.interact("Eat");
 				return -3;
+			}
+		}
+
+		if (Movement.getRunEnergy() < 100 && Game.getWildyLevel() == 0)
+		{
+			Item potion = Inventory.getFirst(x -> (x.getName() != null && x.getName().contains("Energy")));
+			if (potion != null)
+			{
+				potion.interact("Drink");
+				return -1;
 			}
 		}
 
