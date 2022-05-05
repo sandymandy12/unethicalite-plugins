@@ -194,6 +194,12 @@ public class DCTelegraberPlugin extends LoopedPlugin
 					return move();
 				}
 			}
+			else if (Inventory.getCount(true, ItemID.LAW_RUNE) > 2
+					&& local.distanceTo(NATURE_RUNE_WORLD_POINT) > 0) // we should go to the spot
+			{
+				Movement.walkTo(NATURE_RUNE_WORLD_POINT);
+				return -4;
+			}
 			else if (Inventory.getCount(true, ItemID.LAW_RUNE) <= 2) // used the last law rune, time to leave
 			{
 				return move();
@@ -204,7 +210,6 @@ public class DCTelegraberPlugin extends LoopedPlugin
 				// in case there is a problem (onchatmessage) will null quickhopworld
 				if (Worlds.isHopperOpen() && quickHopWorld == null)
 				{
-					log.info("HOPPING >> anim {}, idle {}, loot {}, quickWorld {}", local.isAnimating(), local.isIdle(), lootedItem != null, quickHopWorld != null);
 					clientThread.invoke(this::hop);
 					return -2;
 				}
@@ -426,7 +431,6 @@ public class DCTelegraberPlugin extends LoopedPlugin
 		if (projectile.getId() == 143)
 		{
 			log.info("telegrab sent");
-//			lootedItem = null;
 			teleGrabProjectile = projectile;
 
 		}

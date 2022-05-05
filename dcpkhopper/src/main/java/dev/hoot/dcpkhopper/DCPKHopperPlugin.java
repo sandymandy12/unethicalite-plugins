@@ -181,7 +181,7 @@ public class DCPKHopperPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
-		if (event.getGameState() == GameState.LOADING)
+		if (event.getGameState() == GameState.HOPPING)
 		{
 //			log.info("Game state changed " + event.getGameState());
 			resetQuickHopper();
@@ -349,7 +349,6 @@ public class DCPKHopperPlugin extends Plugin
 
 	private void resetQuickHopper()
 	{
-//		hopping = false;
 		displaySwitcherAttempts = 0;
 		quickHopTargetWorld = null;
 	}
