@@ -147,22 +147,39 @@ public class DCTelegraberPlugin extends LoopedPlugin
 			}
 		}
 
+		if (Movement.getRunEnergy() < 50)
+		{
+			Item potion = Inventory.getFirst(x -> (x.getName() != null && x.getName().contains("Energy")));
+			if (potion != null)
+			{
+				potion.interact("Drink");
+				return -1;
+			}
+		}
+
 		Player nearbyPlayer = Players.getNearest((p) -> !p.equals(local));
-		if (pker != null || nearbyPlayer != null)
+		if (pker != null || (nearbyPlayer != null && Game.getWildyLevel() != 0))
 		{
 			log.info("nearby {}", nearbyPlayer.getName());
+			if (!Movement.isRunEnabled())
+			{
+				Movement.toggleRun();
+			}
 			return move();
 		}
 
+		if (Movement.isWalking())
+		{
+			return -4;
+		}
 		List<String> itemsToLoot = List.of(config.loot().split(","));
 
 		if (!Inventory.isFull())
 		{
 			TileItem loot = TileItems.getNearest(x ->
 					x.getTile().getWorldLocation().distanceTo(local.getWorldLocation()) < config.lootRange()
-							&& ((x.getName() != null && itemsToLoot.contains(x.getName()) && !x.getName().equals("Coins")
-							|| (config.lootValue() > -1 && itemManager.getItemPrice(x.getId()) * x.getQuantity() > config.lootValue())
-							|| (config.untradables() && (!x.isTradable()) || x.hasInventoryAction("Destroy"))))
+							&& ((x.getName() != null && (itemsToLoot.contains(x.getName()) || !x.getName().equals("Coins"))
+							|| (config.lootValue() > -1 && itemManager.getItemPrice(x.getId()) * x.getQuantity() > config.lootValue())))
 			);
 
 			if (loot != null)
@@ -220,17 +237,12 @@ public class DCTelegraberPlugin extends LoopedPlugin
 			return -1;
 		}
 
-		final int lawsNeeded = 500 - Inventory.getCount(true, ItemID.LAW_RUNE);
-		final int energyNeeded = 6 - Inventory.getCount((x) -> x.getName().contains("Energy potion"));
+		final int lawsNeeded = 250 - Inventory.getCount(true, ItemID.LAW_RUNE);
+		final int energyNeeded = 6 - Inventory.getCount((x) -> x.getName().equals("Energy potion(4)"));
+		final int lobsterNeeded = Inventory.getFreeSlots() - 3;
 		final boolean fireNeeded = Inventory.getCount(true, ItemID.FIRE_RUNE) < 5;
 
-		if (lawsNeeded > 0)
-		{
-			log.info("Withdrawing {} laws", lawsNeeded);
-			Bank.withdraw(ItemID.LAW_RUNE, lawsNeeded, Bank.WithdrawMode.ITEM);
-			return -1;
-		}
-		else if (fireNeeded)
+		if (fireNeeded)
 		{
 			log.info("Withdrawing 50 fire runes");
 			Bank.withdraw(ItemID.FIRE_RUNE, 50, Bank.WithdrawMode.ITEM);
@@ -242,12 +254,18 @@ public class DCTelegraberPlugin extends LoopedPlugin
 			Bank.withdraw(ItemID.ENERGY_POTION4, energyNeeded, Bank.WithdrawMode.ITEM);
 			return -2;
 		}
-		else
+		else if (lobsterNeeded > 0)
 		{
-			final int lobsterNeeded = Inventory.getFreeSlots() - 3;
 			Bank.withdraw(ItemID.LOBSTER, lobsterNeeded, Bank.WithdrawMode.DEFAULT);
 			return -2;
 		}
+		else if (lawsNeeded > 0)
+		{
+			log.info("Withdrawing {} laws", lawsNeeded);
+			Bank.withdraw(ItemID.LAW_RUNE, lawsNeeded, Bank.WithdrawMode.ITEM);
+			return -1;
+		}
+		return -1;
 	}
 
 	private int move()
