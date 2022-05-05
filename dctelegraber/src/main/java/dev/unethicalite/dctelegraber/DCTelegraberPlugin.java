@@ -123,6 +123,7 @@ public class DCTelegraberPlugin extends LoopedPlugin
 		if (withinRange(playerSpawned.getPlayer()))
 		{
 			pker = playerSpawned.getPlayer();
+			Game.getClient().playSoundEffect(SoundEffectID.TOWN_CRIER_BELL_DING);
 		}
 	}
 
@@ -381,6 +382,7 @@ public class DCTelegraberPlugin extends LoopedPlugin
 				log.info("Opening hopper");
 
 			}
+			Game.getClient().playSoundEffect(SoundEffectID.TELEPORT_VWOOP);
 			Worlds.hopTo(rsWorld);
 			quickHopWorld = rsWorld;
 
